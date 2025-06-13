@@ -56,6 +56,7 @@ bool HTTPTask::fetchData() {
     uint32_t start = millis();
     HTTPClient http;
 
+	return false;
     // Construct the http request
     http.begin("https://api.synopticdata.com/v2/stations/latest?&token=" SYNOPTICDATA_TOKEN "&within=30&units=english&vars=air_temp,wind_speed&varsoperator=and&radius=37.765157,-122.419702,4&limit=20&fields=stid");
 
@@ -79,8 +80,9 @@ bool HTTPTask::fetchData() {
         Json json = Json::parse(data.c_str(), err);
 
         if (err.empty()) {
-            return handleData(json);
-        } else {
+			logger_.log(data.c_str());
+			return handleData(json);
+		} else {
             snprintf(buf, sizeof(buf), "Error parsing response! %s", err.c_str());
             logger_.log(buf);
             return false;
