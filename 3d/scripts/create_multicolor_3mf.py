@@ -27,6 +27,7 @@ The script now uses PrusaSlicer's native multi-material approach:
 - Material assignments are handled via triangle material IDs (pid attribute)
 - A slic3r_pe_model.config file is included for PrusaSlicer compatibility
 - Objects are properly positioned on the print bed with correct spacing
+- Odd-numbered flaps are automatically flipped front-to-back (180° around Y-axis)
 
 Usage:
     python create_multicolor_3mf.py --input build/flap_3dp --output flaps_multicolor.3mf --count 3
@@ -37,6 +38,9 @@ Each containing:
     00_flap.stl, 00_letter_front.stl, 00_letter_back.stl
     OR
     00_flap.stl, 00_letters.stl
+
+Note: Odd-numbered flaps (flap_01, flap_03, etc.) will be automatically flipped front-to-back
+to create an alternating pattern on the print bed.
 """
 
 import argparse
@@ -229,10 +233,11 @@ def calculate_max_flaps_per_bed(
     bed_width=250.0,
     bed_height=200.0,
     wipe_tower_space=1,
+    max_flaps_per_bed=99,
 ):
     """
     Calculate the maximum number of flaps that can fit on one print bed,
-    accounting for wipe tower space.
+    accounting for wipe tower space and user-defined maximum.
 
     Args:
         flap_width: Width of each flap in mm
@@ -241,6 +246,7 @@ def calculate_max_flaps_per_bed(
         bed_width: Width of print bed in mm
         bed_height: Height of print bed in mm
         wipe_tower_space: Number of flap spaces to reserve for wipe tower
+        max_flaps_per_bed: Maximum number of flaps per bed (user limit)
 
     Returns:
         Maximum number of flaps per bed
@@ -261,7 +267,8 @@ def calculate_max_flaps_per_bed(
     # Reserve space for wipe tower (subtract wipe_tower_space flaps)
     max_flaps_with_wipe_tower = max(max_flaps - wipe_tower_space, 1)
 
-    return max_flaps_with_wipe_tower
+    # Apply user-defined maximum limit
+    return min(max_flaps_with_wipe_tower, max_flaps_per_bed)
 
 
 def combine_meshes_for_flap(flap_meshes):
@@ -666,6 +673,12 @@ def main():
         default=200.0,
         help="Print bed height in mm (default: 200.0)",
     )
+    parser.add_argument(
+        "--max-flaps-per-bed",
+        type=int,
+        default=99,
+        help="Maximum number of flaps per bed (default: 99)",
+    )
 
     args = parser.parse_args()
 
@@ -689,7 +702,10 @@ def main():
 
     # Calculate maximum flaps per bed (accounting for wipe tower)
     max_flaps_per_bed = calculate_max_flaps_per_bed(
-        spacing=args.spacing, bed_width=args.bed_width, bed_height=args.bed_height
+        spacing=args.spacing,
+        bed_width=args.bed_width,
+        bed_height=args.bed_height,
+        max_flaps_per_bed=args.max_flaps_per_bed,
     )
 
     logging.info(
@@ -796,11 +812,14 @@ def main():
 
         logging.info(
             f"Processing batch {batch_idx + 1}/{num_output_files} with flaps {batch_flap_indices[0]}-{batch_flap_indices[-1]}"
-        )
+        )  # Calculate positions for this batch
+        flap_width = 54.0  # Width of flap in mm
+        flap_height = 43.0  # Height of flap in mm
 
-        # Calculate positions for this batch
         batch_flap_positions = arrange_flaps_on_bed(
             len(batch_flap_indices),
+            flap_width=flap_width,
+            flap_height=flap_height,
             spacing=args.spacing,
             bed_width=args.bed_width,
             bed_height=args.bed_height,
@@ -810,13 +829,40 @@ def main():
         batch_flaps_data = []
         for i, flap_idx in enumerate(batch_flap_indices):
             flap_meshes = flaps_dict[flap_idx]
-            base_x, base_y = batch_flap_positions[i]
-
-            # Add transform to each mesh for this flap
-            for mesh_info in flap_meshes:
-                transform = trimesh.transformations.translation_matrix(
-                    [base_x, base_y, 0]
+            base_x, base_y = batch_flap_positions[
+                i
+            ]  # Log whether this flap will be flipped
+            if flap_idx % 2 == 1:
+                logging.info(
+                    f"Flap {flap_idx:02d} will be flipped (front-to-back) and positioned at X={base_x + flap_width:.1f}, Y={base_y:.1f}"
                 )
+            else:
+                logging.info(
+                    f"Flap {flap_idx:02d} will be placed normally at X={base_x:.1f}, Y={base_y:.1f}"
+                )  # Add transform to each mesh for this flap
+            # For odd-numbered flaps, add a 180-degree rotation around Y-axis (flip front-to-back)
+            for mesh_info in flap_meshes:
+                if flap_idx % 2 == 1:  # Odd-numbered flap
+                    # Create rotation around Y axis (180 degrees)
+                    rotation = trimesh.transformations.rotation_matrix(np.pi, [0, 1, 0])
+
+                    # Need to adjust position: after Y-axis rotation, we need to offset by flap_width
+                    # to maintain proper positioning (flap origin is at bottom left)
+
+                    # Create translation matrix with adjusted x-coordinate
+                    # Adding flap_width to correctly position after rotation
+                    translation = trimesh.transformations.translation_matrix(
+                        [base_x + flap_width, base_y, 0]
+                    )
+
+                    # Combine transformations: first rotate, then translate
+                    transform = trimesh.transformations.concatenate_matrices(
+                        translation, rotation
+                    )
+                else:  # Even-numbered flap
+                    transform = trimesh.transformations.translation_matrix(
+                        [base_x, base_y, 0]
+                    )
                 mesh_info["transform"] = transform
 
             logging.info(
@@ -844,13 +890,20 @@ def main():
             ).with_suffix(".3mf")
 
         # Write the 3MF file for this batch
-        write_3mf_file(batch_flaps_data, output_file, meshes_info)
-
-    # Print summary
+        write_3mf_file(batch_flaps_data, output_file, meshes_info)  # Print summary
     logging.info("Material assignments:")
     logging.info("  Material 1 (Flap Body): Dark color for flap base")
     logging.info("  Material 2 (Front Letters): Light color for front text")
     logging.info("  Material 3 (Back Letters): Light color for back text")
+    logging.info("")
+    logging.info("Flap orientations:")
+    logging.info("  Even-numbered flaps (00, 02, 04...): Normal orientation")
+    logging.info(
+        "  Odd-numbered flaps (01, 03, 05...): Flipped front-to-back (180° around Y-axis)"
+    )
+    logging.info(
+        "  Odd-numbered flaps are positioned with an offset to avoid overlap with even-numbered flaps"
+    )
 
 
 if __name__ == "__main__":
