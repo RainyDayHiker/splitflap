@@ -645,8 +645,8 @@ def main():
         "--count",
         "-c",
         type=int,
-        default=3,
-        help="Number of flaps to include (default: 3)",
+        default=52,
+        help="Number of flaps to include (default: 52)",
     )
     parser.add_argument(
         "--start",
@@ -676,8 +676,8 @@ def main():
     parser.add_argument(
         "--max-flaps-per-bed",
         type=int,
-        default=99,
-        help="Maximum number of flaps per bed (default: 99)",
+        default=8,
+        help="Maximum number of flaps per bed presuming they all fit on a bed (default: 8)",
     )
 
     args = parser.parse_args()
