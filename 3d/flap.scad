@@ -21,7 +21,7 @@ use<flap_characters.scad>;
 // TODO: extract core flap spool dimensions used for vertical_keepout_size instead of using the full splitflap file
 use<splitflap.scad>;
 
-character_list = ",,";//get_character_list();
+character_list = get_character_list();
 
 color_list = [
     ["p", [122,  40, 203] / 255], // #7a28cb
