@@ -6,5 +6,6 @@ Changes:
 - Spool: Modified the interior to have enough curves to not require any supports
 - Right Plate: Changed the holder for the nuts in the center of the top rails so that the nuts are trapped.  Added some flaps to provide a cable channel.
 - Left Plate: Added some flaps to provide a cable channel.
+- Not a Mount: just a spacer to use when I don't need a mount but want something to stiffen everything up
 
 Flaps are generated with Instruction and NotoEmoji fonts.  Two sets - one for most of the characters and one with weather icons for a single character.  Biggest change from original set is that I replaced some colors with emojis.
