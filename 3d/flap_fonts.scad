@@ -189,8 +189,8 @@ _font_settings = [
         "offset_y", -.7,
         "overrides", [
             // letter, x, y, height, width, thickness
-            ["-", undef,    -6, undef, undef, undef],
-            [",",    14,     6, undef, undef, undef],
+            ["-", undef,    -7, undef, undef, undef],
+            [",",    14,     7.5, undef, undef, undef],
             [".",    14, undef, undef, undef, undef],
             ["!",    14, undef, undef, undef, undef],
             ["'",    14, undef, undef, undef, undef],

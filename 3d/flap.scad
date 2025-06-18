@@ -21,7 +21,7 @@ use<flap_characters.scad>;
 // TODO: extract core flap spool dimensions used for vertical_keepout_size instead of using the full splitflap file
 use<splitflap.scad>;
 
-character_list = get_character_list();
+character_list = ",,";//get_character_list();
 
 color_list = [
     ["p", [122,  40, 203] / 255], // #7a28cb
@@ -51,7 +51,7 @@ emoji_list = [
 letter_facet_number = 100;
 
 // Vertical keepout refers to the portion of bottom flaps that are visible stacked behind the frontmost flap.
-vertical_keepout_mode = 1;              // 0=ignore; 1=highlight; 2=cut
+vertical_keepout_mode = 0;              // 0=ignore; 1=highlight; 2=cut
 vertical_keepout_size_factor = 1.1;     // Expand calculated keepout region by this factor. 1=no expansion, 1.5=50% expansion, etc
 
 vertical_keepout_size = get_flap_arc_separation() * vertical_keepout_size_factor;
