@@ -187,9 +187,13 @@ def arrange_flaps_on_bed(
     spacing=2.0,
     bed_width=250.0,
     bed_height=200.0,
+    wipe_tower_x=185.0,
+    wipe_tower_y=130.0,
+    wipe_tower_width=65.0,
+    wipe_tower_height=70.0,
 ):
     """
-    Calculate positions for flaps on the print bed.
+    Calculate positions for flaps on the print bed, avoiding the wipe tower area.
 
     Args:
         num_flaps: Number of flaps to arrange
@@ -198,10 +202,33 @@ def arrange_flaps_on_bed(
         spacing: Spacing between flaps in mm
         bed_width: Width of print bed in mm
         bed_height: Height of print bed in mm
+        wipe_tower_x: X position of wipe tower
+        wipe_tower_y: Y position of wipe tower
+        wipe_tower_width: Width of wipe tower area
+        wipe_tower_height: Height of wipe tower area
 
     Returns:
         List of (x, y) positions for each flap
     """
+
+    def flap_overlaps_wipe_tower(flap_x, flap_y):
+        """Check if a flap at the given position overlaps with the wipe tower."""
+        # Flap occupies from (flap_x, flap_y) to (flap_x + flap_width, flap_y + flap_height)
+        flap_right = flap_x + flap_width
+        flap_top = flap_y + flap_height
+
+        # Wipe tower occupies from (wipe_tower_x, wipe_tower_y) to (wipe_tower_x + wipe_tower_width, wipe_tower_y + wipe_tower_height)
+        tower_right = wipe_tower_x + wipe_tower_width
+        tower_top = wipe_tower_y + wipe_tower_height
+
+        # Check for overlap using rectangle intersection logic
+        return not (
+            flap_right <= wipe_tower_x
+            or flap_x >= tower_right
+            or flap_top <= wipe_tower_y
+            or flap_y >= tower_top
+        )
+
     positions = []
 
     # Calculate how many flaps fit in one row
@@ -214,14 +241,30 @@ def arrange_flaps_on_bed(
     if rows_per_bed == 0:
         rows_per_bed = 1
 
-    for i in range(num_flaps):
-        row = i // flaps_per_row
-        col = i % flaps_per_row
+    placed_flaps = 0
 
-        x = col * (flap_width + spacing)
-        y = row * (flap_height + spacing)
+    for row in range(rows_per_bed):
+        if placed_flaps >= num_flaps:
+            break
 
-        positions.append((x, y))
+        for col in range(flaps_per_row):
+            if placed_flaps >= num_flaps:
+                break
+
+            x = col * (flap_width + spacing)
+            y = row * (flap_height + spacing)
+
+            # Check if this position overlaps with the wipe tower
+            if flap_overlaps_wipe_tower(x, y):
+                logging.info(
+                    f"Skipping position ({x:.1f}, {y:.1f}) due to wipe tower overlap"
+                )
+                continue
+
+            # Check if flap fits within bed boundaries
+            if x + flap_width <= bed_width and y + flap_height <= bed_height:
+                positions.append((x, y))
+                placed_flaps += 1
 
     return positions
 
@@ -232,7 +275,10 @@ def calculate_max_flaps_per_bed(
     spacing=2.0,
     bed_width=250.0,
     bed_height=200.0,
-    wipe_tower_space=1,
+    wipe_tower_x=185.0,
+    wipe_tower_y=130.0,
+    wipe_tower_width=65.0,
+    wipe_tower_height=70.0,
     max_flaps_per_bed=99,
 ):
     """
@@ -245,12 +291,34 @@ def calculate_max_flaps_per_bed(
         spacing: Spacing between flaps in mm
         bed_width: Width of print bed in mm
         bed_height: Height of print bed in mm
-        wipe_tower_space: Number of flap spaces to reserve for wipe tower
+        wipe_tower_x: X position of wipe tower
+        wipe_tower_y: Y position of wipe tower
+        wipe_tower_width: Width of wipe tower area
+        wipe_tower_height: Height of wipe tower area
         max_flaps_per_bed: Maximum number of flaps per bed (user limit)
 
     Returns:
         Maximum number of flaps per bed
     """
+
+    def flap_overlaps_wipe_tower(flap_x, flap_y):
+        """Check if a flap at the given position overlaps with the wipe tower."""
+        # Flap occupies from (flap_x, flap_y) to (flap_x + flap_width, flap_y + flap_height)
+        flap_right = flap_x + flap_width
+        flap_top = flap_y + flap_height
+
+        # Wipe tower occupies from (wipe_tower_x, wipe_tower_y) to (wipe_tower_x + wipe_tower_width, wipe_tower_y + wipe_tower_height)
+        tower_right = wipe_tower_x + wipe_tower_width
+        tower_top = wipe_tower_y + wipe_tower_height
+
+        # Check for overlap using rectangle intersection logic
+        return not (
+            flap_right <= wipe_tower_x
+            or flap_x >= tower_right
+            or flap_top <= wipe_tower_y
+            or flap_y >= tower_top
+        )
+
     # Calculate how many flaps fit in one row
     flaps_per_row = int(bed_width // (flap_width + spacing))
     if flaps_per_row == 0:
@@ -261,14 +329,24 @@ def calculate_max_flaps_per_bed(
     if rows_per_bed == 0:
         rows_per_bed = 1
 
-    # Total flaps that could theoretically fit
-    max_flaps = flaps_per_row * rows_per_bed
+    # Count actual available positions by checking each grid position
+    available_positions = 0
 
-    # Reserve space for wipe tower (subtract wipe_tower_space flaps)
-    max_flaps_with_wipe_tower = max(max_flaps - wipe_tower_space, 1)
+    for row in range(rows_per_bed):
+        for col in range(flaps_per_row):
+            x = col * (flap_width + spacing)
+            y = row * (flap_height + spacing)
+
+            # Check if this position overlaps with the wipe tower
+            if flap_overlaps_wipe_tower(x, y):
+                continue
+
+            # Check if flap fits within bed boundaries
+            if x + flap_width <= bed_width and y + flap_height <= bed_height:
+                available_positions += 1
 
     # Apply user-defined maximum limit
-    return min(max_flaps_with_wipe_tower, max_flaps_per_bed)
+    return min(available_positions, max_flaps_per_bed)
 
 
 def combine_meshes_for_flap(flap_meshes):
@@ -574,19 +652,25 @@ def create_slic3r_config(flaps_data):
     return f'<?xml version="1.0" encoding="UTF-8"?>\n{xml_str}'
 
 
-def create_slic3r_pe_config():
+def create_slic3r_pe_config(wipe_tower_x=185.0, wipe_tower_y=130.0):
     """
     Create Slic3r_PE.config file content for PrusaSlicer wipe tower configuration.
+
+    Args:
+        wipe_tower_x: X position of wipe tower
+        wipe_tower_y: Y position of wipe tower
 
     Returns:
         Config file content as string
     """
-    return """; wipe_tower_x = 184.93
-; wipe_tower_y = 169.242
+    return f"""; wipe_tower_x = {wipe_tower_x}
+; wipe_tower_y = {wipe_tower_y}
 """
 
 
-def write_3mf_file(flaps_data, output_file, meshes_info):
+def write_3mf_file(
+    flaps_data, output_file, meshes_info, wipe_tower_x=185.0, wipe_tower_y=130.0
+):
     """
     Write a 3MF file with the given flap data.
 
@@ -594,6 +678,8 @@ def write_3mf_file(flaps_data, output_file, meshes_info):
         flaps_data: List of flap data to include in the file
         output_file: Path to the output 3MF file
         meshes_info: List of all mesh info for statistics
+        wipe_tower_x: X position of wipe tower
+        wipe_tower_y: Y position of wipe tower
     """
     try:
         with zipfile.ZipFile(output_file, "w", zipfile.ZIP_DEFLATED) as zf:
@@ -607,10 +693,10 @@ def write_3mf_file(flaps_data, output_file, meshes_info):
                 "3D/3dmodel.model", model_xml
             )  # Create and add the PrusaSlicer config file
             slic3r_config = create_slic3r_config(flaps_data)
-            zf.writestr("Metadata/Slic3r_PE_model.config", slic3r_config)
-
-            # Create and add the PrusaSlicer wipe tower config file
-            slic3r_pe_config = create_slic3r_pe_config()
+            zf.writestr(
+                "Metadata/Slic3r_PE_model.config", slic3r_config
+            )  # Create and add the PrusaSlicer wipe tower config file
+            slic3r_pe_config = create_slic3r_pe_config(wipe_tower_x, wipe_tower_y)
             zf.writestr("Metadata/Slic3r_PE.config", slic3r_pe_config)
 
         logging.info(f"Successfully created 3MF file: {output_file}")
@@ -676,8 +762,32 @@ def main():
     parser.add_argument(
         "--max-flaps-per-bed",
         type=int,
-        default=8,
-        help="Maximum number of flaps per bed presuming they all fit on a bed (default: 8)",
+        default=20,
+        help="Maximum number of flaps per bed presuming they all fit on a bed (default: 20)",
+    )
+    parser.add_argument(
+        "--wipe-tower-x",
+        type=float,
+        default=185.0,
+        help="X position of wipe tower in mm (default: 185.0)",
+    )
+    parser.add_argument(
+        "--wipe-tower-y",
+        type=float,
+        default=130.0,
+        help="Y position of wipe tower in mm (default: 130.0)",
+    )
+    parser.add_argument(
+        "--wipe-tower-width",
+        type=float,
+        default=65.0,
+        help="Width of wipe tower area in mm (default: 65.0)",
+    )
+    parser.add_argument(
+        "--wipe-tower-height",
+        type=float,
+        default=70.0,
+        help="Height of wipe tower area in mm (default: 70.0)",
     )
 
     args = parser.parse_args()
@@ -698,13 +808,15 @@ def main():
     # Validate input directory
     if not input_dir.exists():
         print(f"Error: Input directory {input_dir} does not exist")
-        sys.exit(1)
-
-    # Calculate maximum flaps per bed (accounting for wipe tower)
+        sys.exit(1)  # Calculate maximum flaps per bed (accounting for wipe tower)
     max_flaps_per_bed = calculate_max_flaps_per_bed(
         spacing=args.spacing,
         bed_width=args.bed_width,
         bed_height=args.bed_height,
+        wipe_tower_x=args.wipe_tower_x,
+        wipe_tower_y=args.wipe_tower_y,
+        wipe_tower_width=args.wipe_tower_width,
+        wipe_tower_height=args.wipe_tower_height,
         max_flaps_per_bed=args.max_flaps_per_bed,
     )
 
@@ -797,9 +909,9 @@ def main():
         flap_idx = mesh_info["flap_idx"]
         if flap_idx not in flaps_dict:
             flaps_dict[flap_idx] = []
-        flaps_dict[flap_idx].append(mesh_info)
-
-    # Process flaps in batches based on bed size
+        flaps_dict[flap_idx].append(
+            mesh_info
+        )  # Process flaps in batches based on bed size
     flap_indices = sorted(flaps_dict.keys())
 
     for batch_idx in range(num_output_files):
@@ -812,7 +924,8 @@ def main():
 
         logging.info(
             f"Processing batch {batch_idx + 1}/{num_output_files} with flaps {batch_flap_indices[0]}-{batch_flap_indices[-1]}"
-        )  # Calculate positions for this batch
+        )
+        # Calculate positions for this batch
         flap_width = 54.0  # Width of flap in mm
         flap_height = 43.0  # Height of flap in mm
 
@@ -823,6 +936,10 @@ def main():
             spacing=args.spacing,
             bed_width=args.bed_width,
             bed_height=args.bed_height,
+            wipe_tower_x=args.wipe_tower_x,
+            wipe_tower_y=args.wipe_tower_y,
+            wipe_tower_width=args.wipe_tower_width,
+            wipe_tower_height=args.wipe_tower_height,
         )
 
         # Add transforms to meshes for this batch
@@ -887,10 +1004,16 @@ def main():
         else:
             output_file = output_base.with_name(
                 f"{output_base.name}_{batch_idx + 1}"
-            ).with_suffix(".3mf")
-
-        # Write the 3MF file for this batch
-        write_3mf_file(batch_flaps_data, output_file, meshes_info)  # Print summary
+            ).with_suffix(
+                ".3mf"
+            )  # Write the 3MF file for this batch
+        write_3mf_file(
+            batch_flaps_data,
+            output_file,
+            meshes_info,
+            args.wipe_tower_x,
+            args.wipe_tower_y,
+        )  # Print summary
     logging.info("Material assignments:")
     logging.info("  Material 1 (Flap Body): Dark color for flap base")
     logging.info("  Material 2 (Front Letters): Light color for front text")
