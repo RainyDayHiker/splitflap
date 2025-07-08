@@ -32,6 +32,12 @@ The script now uses PrusaSlicer's native multi-material approach:
 Usage:
     python create_multicolor_3mf.py --input build/flap_3dp --output flaps_multicolor.3mf --count 3
 
+    # Or to auto-detect all available flaps:
+    python create_multicolor_3mf.py --input build/flap_3dp --output flaps_multicolor.3mf
+
+    # Skip specific flap numbers:
+    python create_multicolor_3mf.py --input build/flap_3dp --output flaps_multicolor.3mf --skip 5 12 23
+
 The script expects the input directory to contain subdirectories like:
     flap_00/, flap_01/, flap_02/, etc.
 Each containing:
@@ -707,6 +713,47 @@ def write_3mf_file(
         sys.exit(1)
 
 
+def discover_available_flaps(input_dir):
+    """
+    Discover all available flap directories in the input directory.
+
+    Args:
+        input_dir: Path to the input directory containing flap_XX subdirectories
+
+    Returns:
+        List of flap indices (integers) that have valid flap directories
+    """
+    flap_indices = []
+
+    if not input_dir.exists():
+        logging.warning(f"Input directory {input_dir} does not exist")
+        return flap_indices
+
+    # Look for directories matching the pattern flap_XX
+    for item in input_dir.iterdir():
+        if item.is_dir() and item.name.startswith("flap_"):
+            try:
+                # Extract the flap number from the directory name
+                flap_num_str = item.name[5:]  # Remove "flap_" prefix
+                flap_idx = int(flap_num_str)
+
+                # Check if the directory contains the required flap STL file
+                flap_stl = item / f"{flap_idx:02d}_flap.stl"
+                if flap_stl.exists():
+                    flap_indices.append(flap_idx)
+                else:
+                    logging.debug(
+                        f"Flap directory {item.name} exists but missing flap STL file"
+                    )
+            except ValueError:
+                logging.debug(f"Directory {item.name} doesn't match flap_XX pattern")
+                continue
+
+    flap_indices.sort()
+    logging.info(f"Discovered {len(flap_indices)} available flaps: {flap_indices}")
+    return flap_indices
+
+
 def main():
     logging.basicConfig(level=logging.INFO)
 
@@ -731,8 +778,8 @@ def main():
         "--count",
         "-c",
         type=int,
-        default=52,
-        help="Number of flaps to include (default: 52)",
+        default=None,
+        help="Number of flaps to include (default: auto-detect all available flaps)",
     )
     parser.add_argument(
         "--start",
@@ -740,6 +787,13 @@ def main():
         type=int,
         default=0,
         help="Starting flap number (default: 0)",
+    )
+    parser.add_argument(
+        "--skip",
+        type=int,
+        nargs="*",
+        default=[],
+        help="Specific flap numbers to skip (e.g., --skip 5 12 23)",
     )
     parser.add_argument(
         "--spacing",
@@ -808,7 +862,45 @@ def main():
     # Validate input directory
     if not input_dir.exists():
         print(f"Error: Input directory {input_dir} does not exist")
-        sys.exit(1)  # Calculate maximum flaps per bed (accounting for wipe tower)
+        sys.exit(1)
+
+    # Discover available flaps if count not provided
+    if args.count is None:
+        available_flaps = discover_available_flaps(input_dir)
+        if not available_flaps:
+            print(f"Error: No flap directories found in {input_dir}")
+            sys.exit(1)
+        flap_indices_to_process = available_flaps
+        args.count = len(available_flaps)
+        logging.info(f"Auto-detected {args.count} flaps: {available_flaps}")
+    else:
+        # User provided specific count, use consecutive range starting from args.start
+        flap_indices_to_process = list(range(args.start, args.start + args.count))
+        logging.info(
+            f"Using user-specified range: flaps {args.start} to {args.start + args.count - 1}"
+        )
+
+    # Apply skip filter if any flap numbers were specified to skip
+    if args.skip:
+        original_count = len(flap_indices_to_process)
+        flap_indices_to_process = [
+            idx for idx in flap_indices_to_process if idx not in args.skip
+        ]
+        skipped_count = original_count - len(flap_indices_to_process)
+        if skipped_count > 0:
+            logging.info(f"Skipping {skipped_count} flaps: {sorted(args.skip)}")
+            logging.info(
+                f"Remaining flaps to process: {len(flap_indices_to_process)} flaps"
+            )
+
+        # Update args.count to reflect the actual number of flaps to process
+        args.count = len(flap_indices_to_process)
+
+        if not flap_indices_to_process:
+            print("Error: No flaps remaining after applying skip filter")
+            sys.exit(1)
+
+    # Calculate maximum flaps per bed (accounting for wipe tower)
     max_flaps_per_bed = calculate_max_flaps_per_bed(
         spacing=args.spacing,
         bed_width=args.bed_width,
@@ -829,11 +921,11 @@ def main():
     if num_output_files > 1:
         logging.info(
             f"Will create {num_output_files} output files to fit {args.count} flaps"
-        )  # Collect flap STL files
+        )
+    # Collect flap STL files
     meshes_info = []
 
-    for i in range(args.count):
-        flap_idx = args.start + i
+    for flap_idx in flap_indices_to_process:
         flap_dir = input_dir / f"flap_{flap_idx:02d}"
 
         if not flap_dir.exists():
