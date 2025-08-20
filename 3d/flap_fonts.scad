@@ -180,7 +180,6 @@ _font_settings = [
         // "color_offset_y", 1.4,
     ],
 
-
     "Instruction", [
         "font", "Instruction",
         "height", .8,
@@ -194,6 +193,7 @@ _font_settings = [
             [".",    14, undef, undef, undef, undef],
             ["!",    14, undef, undef, undef, undef],
             ["'",    14, undef, undef, undef, undef],
+            [":",    14,    16, undef, undef, undef],
         ],
     ],
 
