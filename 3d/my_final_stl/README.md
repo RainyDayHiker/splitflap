@@ -6,7 +6,7 @@ Flaps are generated with Instruction and NotoEmoji fonts.  Two sets - one for mo
 
 Major changes from original design:
 - Spool: modeled so that it can be printed without support and assembled without glue
-- Most hardware changed to M3 nuts and screws (all except motor mounting)
+- Most hardware changed to M3 nuts and bolts (all except motor mounting)
 - All nuts are "captured" and not loose
 - Frame pieces now have wire channels to ensure wires are kept out of the way of the flaps
 - Frame extended to provide mounting for panels to enclose the entire display
@@ -70,7 +70,7 @@ Part list:
 	- For each Panel - Left:
 		- M3x8 black (x4)
 		- M3 hex nut (x4)
-		- M3x6 black (x1) (for sensor) -- TODO: check!
+		- M3x6 black (x1) (for sensor) (Note that this is tight but works - an M3x8 would be fine as well)
 		- M3 black hex nut (x1) (for sensor)
 	- For each Panel - Top (of any type):
 		- M3x8 black (x6) -- TODO: check!
@@ -80,14 +80,14 @@ Part list:
 		- M3 hex nut (x3)
 	- For each Chainlink Buddy Mount:
 		- M3x8 button head (x4) (Board to Mount)
-		- M3x10 button head (x1) (Mount to Frame) -- TODO: check!
+		- M3x10 button head (x1) (Mount to Frame)
 		- M3 hex nut (x5)
 	- For each Chainlink Driver Mount:
 		- M3x8 button head (x4) (Board to Mount)
-		- M3x10 button head (x2) (Mount to Frame) -- TODO: check!
+		- M3x10 button head (x2) (Mount to Frame)
 		- M3 hex nut (x6)
 	- For each rubber foot:
- 		- M3x8 button head (x1) -- TODO: check!
+ 		- M3x8 button head (x1)
 		- M3 hex nut (x1)
 		- NOTE: if this foot shares a mounting location with a Chainlink Mount, no additional hardware needed but the Mount to Frame bolt needs to be changed to an M3x12 button head
 
@@ -96,15 +96,15 @@ Assembly instructions:
 	- Check and clean up any loose filament in wire channels in Frame pieces
 	- For the inserted nuts (motor mount and connections between flaps):
 		- Clean out the channels since there are printed overhangs that can leave threads
-		- After inserting the nut, use a hex wrench to ensure it is centered and, ideally, partially insert a screw to make sure things are perfectly aligned before assembly
+		- After inserting the nut, use a hex wrench to ensure it is centered and, ideally, partially insert a bolt to make sure things are perfectly aligned before assembly
 	- For the press fit nuts:
-		- Either use a long screw inserted through the hole to pull the nut into place
+		- Either use a long bolt inserted through the hole to pull the nut into place
 		- Or use a short bolt and tighten the nut into place (techniques work better in different spots)
 		- Nylon nuts don't need this
 	- Highly recommend hex wrenches with ball ends so that they can be used at an angle
 	- All rights/lefts are when looking at the front of the display
 
--Preperation before assembly
+- Preperation before assembly:
 	- Motors: 
 		- Remove blue cover
 		- Tape down the wires with electrical tape
@@ -130,31 +130,56 @@ Assembly instructions:
 		- Insert 3 M3 hex nuts into the top cross pieces for mounting the top and back panels
 		- Insert 1 M3 hex nut into the bottom rear cross piece if this unit will have a mount for a Chainlink Driver or Buddy and will not have a foot (if there is a foot, it will have the nut instead of the frame - see note later for my recommendations here)
 		- Insert 1 M3 hex nut below motor mount for sensor attachment, if this is not the rightmost unit
-		- Mount motor with 2 M4x8 button head screws
+		- Mount motor with 2 M4x8 button head bolts
 
-- Assembly
-	- Start from lower right unit
-	- Attach a Panel - Right to a Frame - Right with four black nuts and M3x8 screws (black is a fashion choice)
-		- Ensure motor cable is correctly captured by the wire channel and not pinched
-	- Insert Spool onto motor
-	- Add a Panel - Bottom to Frame - Right (this can be done later given how flexible the panel is but easier to do it now)
-	- Attach a Frame - Left to the next Frame - Right with an M3x8 screw through the sensor PCB and into the Frame - Right
-		- Ensure motor cable routes through the wire channel and isn't pinched
-		- Ensure sensor cable routes through the wire channel and isn't pinched
-		- Also recommend a small bit of electrical tape covering the solder pins of the connector (just insurance that the spool won't catch on the pins)
-	- Attach the new frame assembly to the display via 4 M3x10 screws through the four frame connectors
-	- Repeat from "Insert Spool" until at width desired
+- Putting it together
+	- First row:
+		1. Start from lower right unit
+		1. Attach a Panel - Right to a Frame - Right with four black nuts and M3x8 bolts (black is a fashion choice)
+			- Ensure motor cable is correctly captured by the wire channel and not pinched
+		1. Optional: Add feet and Chainlink Mounts - these can be added after assembly but are most easily added now - especially the front feet.
+		1. Insert Spool on to the motor
+		1. Add a Panel - Bottom to Frame - Right (this can be done later given how flexible the panel is but easier to do it now)
+		1. Attach a Frame - Left to the next Frame - Right with an M3x8 bolt through the sensor PCB and into the Frame - Right
+			- Ensure motor cable routes through the wire channel and isn't pinched
+			- Ensure sensor cable routes through the wire channel and isn't pinched
+			- Also recommend a small bit of electrical tape covering the solder pins of the connector (just insurance that the spool won't catch on the pins)
+		1. Attach the new frame assembly to the display via 4 M3x10 bolts through the four frame connectors
+		1. Repeat from step 3 until at the last unit of the width desired then continue
+		1. Attach the last Frame - Left to the Panel - Left with an M3x6 black bolt into a black nut similar to the above steps attaching a Frame - Left to a Frame - Right
+			- Ensure sensor cable routes through the wire channel and isn't pinched
+		1. Add a spool on to the motor
+		1. Attach the Left assembly to the display with 4 M3x8 black bolts through the four frame connectors.
+
+	- Additional rows are the same steps as the first row except:
+		- Skip installing the bottom panel
+		- Attach the upper frame to the lower frame with 2 M3x10 (TODO CHECK!) bolts
+			- For any upper unit that will have a Chainlink mount installed, easiest to do it now and use an M3x12 bolt instead although it can be done at the end as well
+	
+	- Finally:
+		1. Install any moounts and feet not yet installed
+		1. Install Chainlink hardware
+		1. Install back panels, routing power cables through appropriate holes
+		1. Install top panels using black bolts
+
+- For a 6 unit wide setup, here is my recommendation for hardware mounts and feet from right to left (from front):
+	- Foot
+	- Driver
+	- Empty (could be a foot for more stability - easy to add later)
+	- Empty
+	- Driver
+	- Foot + Buddy
 
 - For a 12 unit wide setup, here is my recommendation for hardware mounts and feet from right to left (from front):
+	- Foot
+	- Driver
+	- Empty (could be a foot for more stability - easy to add later)
+	- Empty
+	- Foot + Driver
+	- Empty
+	- Empty
+	- Foot + Driver
+	- Empty
+	- Empty (could be a foot for more stability - easy to add later)
+	- Driver
 	- Foot + Buddy
-	- Driver
-	- Empty (could be a foot for more stability - easy to add later)
-	- Empty
-	- Foot + Driver
-	- Empty
-	- Empty
-	- Foot + Driver
-	- Empty
-	- Empty (could be a foot for more stability - easy to add later)
-	- Driver
-	- Foot 
