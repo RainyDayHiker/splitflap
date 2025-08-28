@@ -80,11 +80,11 @@ Part list:
 		- M3 hex nut (x3)
 	- For each Chainlink Buddy Mount:
 		- M3x8 button head (x4) (Board to Mount)
-		- M3x10 button head (x1) (Mount to Frame)
+		- M3x10 button head (x1) (Mount to Frame) CHECK!!
 		- M3 hex nut (x5)
-	- For each Chainlink Driver Mount:
-		- M3x8 button head (x4) (Board to Mount)
-		- M3x10 button head (x2) (Mount to Frame)
+	- For each Chainlink Driver Mount set:
+		- M3x8 button head (x4) (Board to Mounts)
+		- M3x8 button head (x2) (Mount to Frame)
 		- M3 hex nut (x6)
 	- For each rubber foot:
  		- M3x8 button head (x1)
