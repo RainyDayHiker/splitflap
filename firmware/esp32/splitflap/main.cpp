@@ -5,7 +5,7 @@
    you may not use this file except in compliance with the License.
    You may obtain a copy of the License at
 
-       http://www.apache.org/licenses/LICENSE-2.0
+	   http://www.apache.org/licenses/LICENSE-2.0
 
    Unless required by applicable law or agreed to in writing, software
    distributed under the License is distributed on an "AS IS" BASIS,
@@ -26,6 +26,10 @@
 #include "display_task.h"
 #include "serial_task.h"
 
+#if ENABLE_DISPLAY || HTTP || MQTT
+#include "wifi_task.h"
+#endif
+
 Configuration config;
 
 SplitflapTask splitflapTask(1, LedMode::AUTO);
@@ -33,6 +37,10 @@ SerialTask serialTask(splitflapTask, 0);
 
 #if ENABLE_DISPLAY
 DisplayTask displayTask(splitflapTask, 0);
+#endif
+
+#if ENABLE_DISPLAY || HTTP || MQTT
+WiFiTask wifiTask(displayTask, serialTask, 0);
 #endif
 
 #ifdef CHAINLINK_BASE
@@ -47,50 +55,57 @@ MQTTTask mqttTask(splitflapTask, displayTask, serialTask, 0);
 
 #if HTTP
 #include "http_task.h"
-HTTPTask httpTask(splitflapTask, displayTask, serialTask, 0);
+HTTPTask httpTask(splitflapTask, displayTask, wifiTask, serialTask, 0);
 #endif
 
-void setup() {
-  serialTask.begin();
+void setup()
+{
+	serialTask.begin();
 
-  config.setLogger(&serialTask);
-  bool loaded = config.loadFromDisk();
+	config.setLogger(&serialTask);
+	bool loaded = config.loadFromDisk();
 
-  splitflapTask.begin();
-  splitflapTask.setConfiguration(&config);
+	splitflapTask.begin();
+	splitflapTask.setConfiguration(&config);
 
-  if (loaded) {
-    PB_PersistentConfiguration saved = config.get();
-    uint16_t offsets[NUM_MODULES] = {};
-    for (uint8_t i = 0; i < min(saved.module_offset_steps_count, (pb_size_t)NUM_MODULES); i++) {
-      offsets[i] = saved.module_offset_steps[i];
-    }
-    splitflapTask.restoreAllOffsets(offsets);
-  }
+	if (loaded)
+	{
+		PB_PersistentConfiguration saved = config.get();
+		uint16_t offsets[NUM_MODULES] = {};
+		for (uint8_t i = 0; i < min(saved.module_offset_steps_count, (pb_size_t)NUM_MODULES); i++)
+		{
+			offsets[i] = saved.module_offset_steps[i];
+		}
+		splitflapTask.restoreAllOffsets(offsets);
+	}
 
-  #if ENABLE_DISPLAY
-  displayTask.begin();
-  #endif
+#if ENABLE_DISPLAY
+	displayTask.begin();
+#endif
 
-  #if MQTT
-  mqttTask.begin();
-  #endif
+#if ENABLE_DISPLAY || HTTP || MQTT
+	wifiTask.begin();
+#endif
 
-  #if HTTP
-  httpTask.begin();
-  #endif
+#if MQTT
+	mqttTask.begin();
+#endif
 
-  #ifdef CHAINLINK_BASE
-  baseSupervisorTask.begin();
-  #endif
+#if HTTP
+	httpTask.begin();
+#endif
 
-  logDebugBuildInfo(serialTask);
+#ifdef CHAINLINK_BASE
+	baseSupervisorTask.begin();
+#endif
 
-  // Delete the default Arduino loopTask to free up Core 1
-  vTaskDelete(NULL);
+	logDebugBuildInfo(serialTask);
+
+	// Delete the default Arduino loopTask to free up Core 1
+	vTaskDelete(NULL);
 }
 
-
-void loop() {
-  assert(false);
+void loop()
+{
+	assert(false);
 }

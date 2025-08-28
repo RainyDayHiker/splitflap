@@ -17,11 +17,8 @@
 #include "http_task.h"
 
 #include <HTTPClient.h>
-#include <lwip/apps/sntp.h>
 #include <json11.hpp>
 #include <time.h>
-
-#include "secrets.h"
 
 using namespace json11;
 
@@ -47,9 +44,6 @@ using namespace json11;
 
 // Public token for synoptic data api (it's not secret, but please don't abuse it)
 #define SYNOPTICDATA_TOKEN "e763d68537d9498a90fa808eb9d415d9"
-
-// Timezone for local time strings; this is America/Los_Angeles. See https://github.com/nayarsystems/posix_tz_db/blob/master/zones.csv
-#define TIMEZONE "PST8PDT,M3.2.0,M11.1.0"
 
 bool HTTPTask::fetchData()
 {
@@ -245,54 +239,13 @@ bool HTTPTask::handleData(Json json)
 	return true;
 }
 
-HTTPTask::HTTPTask(SplitflapTask &splitflap_task, DisplayTask &display_task, Logger &logger, const uint8_t task_core) : Task("HTTP", 8192, 1, task_core),
-																														splitflap_task_(splitflap_task),
-																														display_task_(display_task),
-																														logger_(logger),
-																														wifi_client_()
+HTTPTask::HTTPTask(SplitflapTask &splitflap_task, DisplayTask &display_task, WiFiTask &wifi_task, Logger &logger, const uint8_t task_core) : Task("HTTP", 8192, 1, task_core),
+																																			 splitflap_task_(splitflap_task),
+																																			 display_task_(display_task),
+																																			 wifi_task_(wifi_task),
+																																			 logger_(logger),
+																																			 wifi_client_()
 {
-}
-
-void HTTPTask::connectWifi()
-{
-	WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
-
-	// Disable WiFi sleep as it causes glitches on pin 39; see https://github.com/espressif/arduino-esp32/issues/4903#issuecomment-793187707
-	WiFi.setSleep(WIFI_PS_NONE);
-
-	char buf[256];
-
-	logger_.log("Establishing connection to WiFi..");
-	snprintf(buf, sizeof(buf), "Wifi connecting to %s", WIFI_SSID);
-	display_task_.setMessage(1, String(buf));
-	while (WiFi.status() != WL_CONNECTED)
-	{
-		delay(1000);
-	}
-
-	snprintf(buf, sizeof(buf), "Connected to network %s", WIFI_SSID);
-	logger_.log(buf);
-
-	// Sync SNTP
-	sntp_setoperatingmode(SNTP_OPMODE_POLL);
-
-	char server[] = "time.nist.gov"; // sntp_setservername takes a non-const char*, so use a non-const variable to avoid warning
-	sntp_setservername(0, server);
-	sntp_init();
-
-	logger_.log("Waiting for NTP time sync...");
-	snprintf(buf, sizeof(buf), "Syncing NTP time via %s...", server);
-	display_task_.setMessage(1, String(buf));
-	time_t now;
-	while (time(&now), now < 1625099485)
-	{
-		delay(1000);
-	}
-
-	setenv("TZ", TIMEZONE, 1);
-	tzset();
-	strftime(buf, sizeof(buf), "Got time: %Y-%m-%d %H:%M:%S", localtime(&now));
-	logger_.log(buf);
 }
 
 void HTTPTask::run()
@@ -300,11 +253,26 @@ void HTTPTask::run()
 	char buf[max(NUM_MODULES + 1, 200)];
 	char character_list[] = " ABCDEFGHIJKLMNOPQRSTUVWXYZa0123456789b.?-$'#,!&cdef";
 
-	connectWifi();
+	// Wait for WiFi to be ready (connected and time synced)
+	while (!wifi_task_.isReady())
+	{
+		logger_.log("HTTP: Waiting for WiFi to be ready...");
+		delay(5000);
+	}
+
+	logger_.log("HTTP: WiFi is ready, starting HTTP task");
 
 	bool stale = false;
 	while (1)
 	{
+		// Check if WiFi is still ready, if not wait for it
+		if (!wifi_task_.isReady())
+		{
+			logger_.log("HTTP: WiFi not ready, waiting...");
+			delay(5000);
+			continue;
+		}
+
 		long now = millis();
 
 		bool update = false;
@@ -351,33 +319,6 @@ void HTTPTask::run()
 			current_message_index_++;
 			last_message_change_time_ = millis();
 		}
-
-		String wifi_status;
-		switch (WiFi.status())
-		{
-		case WL_IDLE_STATUS:
-			wifi_status = "Idle";
-			break;
-		case WL_NO_SSID_AVAIL:
-			wifi_status = "No SSID";
-			break;
-		case WL_CONNECTED:
-			wifi_status = String(WIFI_SSID) + " " + WiFi.localIP().toString();
-			break;
-		case WL_CONNECT_FAILED:
-			wifi_status = "Connection failed";
-			break;
-		case WL_CONNECTION_LOST:
-			wifi_status = "Connection lost";
-			break;
-		case WL_DISCONNECTED:
-			wifi_status = "Disconnected";
-			break;
-		default:
-			wifi_status = "Unknown";
-			break;
-		}
-		display_task_.setMessage(1, String("Wifi: ") + wifi_status);
 
 		delay(1000);
 	}
