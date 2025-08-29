@@ -29,7 +29,6 @@ enum class WiFiState
 	DISCONNECTED,
 	CONNECTING,
 	CONNECTED,
-	TIME_SYNCING,
 	READY,
 	ERROR
 };
@@ -58,7 +57,6 @@ protected:
 
 private:
 	void connectWifi();
-	void syncTime();
 	void updateState();
 	void updateDisplayStatus();
 
@@ -68,7 +66,6 @@ private:
 	WiFiState state_;
 	uint32_t last_connection_attempt_;
 	uint32_t last_status_update_;
-	bool time_synced_;
 
 	static const uint32_t CONNECTION_RETRY_INTERVAL = 10000; // 10 seconds
 	static const uint32_t STATUS_UPDATE_INTERVAL = 5000;	 // 5 seconds

@@ -19,6 +19,7 @@
 #include <HTTPClient.h>
 #include <json11.hpp>
 #include <time.h>
+#include "LocalTime.h"
 
 using namespace json11;
 
@@ -253,7 +254,7 @@ void HTTPTask::run()
 	char buf[max(NUM_MODULES + 1, 200)];
 	char character_list[] = " ABCDEFGHIJKLMNOPQRSTUVWXYZa0123456789b.?-$'#,!&cdef";
 
-	// Wait for WiFi to be ready (connected and time synced)
+	// Wait for WiFi to be ready
 	while (!wifi_task_.isReady())
 	{
 		logger_.log("HTTP: Waiting for WiFi to be ready...");
@@ -269,6 +270,14 @@ void HTTPTask::run()
 		if (!wifi_task_.isReady())
 		{
 			logger_.log("HTTP: WiFi not ready, waiting...");
+			delay(5000);
+			continue;
+		}
+
+		// Check to see if we have a good time sync
+		if (LocalTime::IsTimeCloseToDefaultTime())
+		{
+			logger_.log("HTTP: Time is not synced, waiting...");
 			delay(5000);
 			continue;
 		}

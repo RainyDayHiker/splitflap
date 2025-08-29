@@ -58,6 +58,7 @@ MQTTTask mqttTask(splitflapTask, displayTask, serialTask, 0);
 #include "http_task.h"
 HTTPTask httpTask(splitflapTask, displayTask, wifiTask, serialTask, 0);
 #endif
+#include "LocalTime.h"
 
 void setup()
 {
@@ -91,6 +92,10 @@ void setup()
 			offsets[i] = default_offsets[i];
 	}
 	splitflapTask.restoreAllOffsets(offsets);
+
+	// Init Time
+	LocalTime::setupTime(LocalTime::TimeZone::LosAngeles);
+	// TODO: Setup config to store this
 
 #if ENABLE_DISPLAY
 	displayTask.begin();

@@ -17,17 +17,13 @@
 #include "wifi_task.h"
 #include "secrets.h"
 
-// Timezone for local time strings; this is America/Los_Angeles. See https://github.com/nayarsystems/posix_tz_db/blob/master/zones.csv
-#define TIMEZONE "PST8PDT,M3.2.0,M11.1.0"
-
 WiFiTask::WiFiTask(DisplayTask &display_task, Logger &logger, const uint8_t task_core)
 	: Task("WiFi", 4096, 1, task_core),
 	  display_task_(display_task),
 	  logger_(logger),
 	  state_(WiFiState::DISCONNECTED),
 	  last_connection_attempt_(0),
-	  last_status_update_(0),
-	  time_synced_(false)
+	  last_status_update_(0)
 {
 }
 
@@ -106,36 +102,6 @@ void WiFiTask::run()
 			{
 				logger_.log("WiFi connection lost");
 				state_ = WiFiState::DISCONNECTED;
-				time_synced_ = false;
-			}
-			else if (!time_synced_)
-			{
-				state_ = WiFiState::TIME_SYNCING;
-				syncTime();
-			}
-			break;
-
-		case WiFiState::TIME_SYNCING:
-			if (WiFi.status() != WL_CONNECTED)
-			{
-				logger_.log("WiFi connection lost during time sync");
-				state_ = WiFiState::DISCONNECTED;
-				time_synced_ = false;
-			}
-			else
-			{
-				time_t now_time;
-				time(&now_time);
-				if (now_time > 1625099485)
-				{ // Check if we have a valid timestamp
-					char buf[256];
-					setenv("TZ", TIMEZONE, 1);
-					tzset();
-					strftime(buf, sizeof(buf), "Got time: %Y-%m-%d %H:%M:%S", localtime(&now_time));
-					logger_.log(buf);
-					time_synced_ = true;
-					state_ = WiFiState::READY;
-				}
 			}
 			break;
 
@@ -144,7 +110,6 @@ void WiFiTask::run()
 			{
 				logger_.log("WiFi connection lost");
 				state_ = WiFiState::DISCONNECTED;
-				time_synced_ = false;
 			}
 			break;
 
@@ -175,22 +140,6 @@ void WiFiTask::connectWifi()
 
 	char buf[256];
 	snprintf(buf, sizeof(buf), "WiFi connecting to %s", WIFI_SSID);
-	display_task_.setMessage(1, String(buf));
-}
-
-void WiFiTask::syncTime()
-{
-	// Set up SNTP for time synchronization
-	sntp_setoperatingmode(SNTP_OPMODE_POLL);
-
-	char server[] = "time.nist.gov"; // sntp_setservername takes a non-const char*
-	sntp_setservername(0, server);
-	sntp_init();
-
-	logger_.log("Waiting for NTP time sync...");
-
-	char buf[256];
-	snprintf(buf, sizeof(buf), "Syncing NTP time via %s...", server);
 	display_task_.setMessage(1, String(buf));
 }
 
