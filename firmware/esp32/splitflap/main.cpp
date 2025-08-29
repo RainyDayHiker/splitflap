@@ -17,6 +17,7 @@
 #include <Arduino.h>
 #include <TFT_eSPI.h>
 #include <Wire.h>
+#include <LITTLEFS.h>
 
 #include "config.h"
 
@@ -61,6 +62,12 @@ HTTPTask httpTask(splitflapTask, displayTask, wifiTask, serialTask, 0);
 void setup()
 {
 	serialTask.begin();
+
+	if (!LITTLEFS.begin(true /*FORMAT_LITTLEFS_IF_FAILED*/))
+	{
+		Serial.println("LITTLEFS Mount Failed");
+		return;
+	}
 
 	config.setLogger(&serialTask);
 	bool loaded = config.loadFromDisk();

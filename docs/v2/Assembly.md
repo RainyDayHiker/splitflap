@@ -285,6 +285,7 @@ You’ll need to configure NUM_MODULES in `platformio.ini` to match the number o
         -DCHAINLINK
         -DNUM_MODULES=6
 
+Move to LittleFS from FFAT: in PlatformIO, make sure to build and upload filesystem image
 
 - Mac Users: you will likely need to install updated drivers for the CH9102 USB-serial adapter used on newer versions of the ESP32 T-Display: https://learn.adafruit.com/how-to-install-drivers-for-wch-usb-to-serial-chips-ch9102f-ch9102/mac-driver-installation
 - To upload code to the ESP32 T-Display from VS Code, you’ll need to (see screenshot below):

@@ -306,9 +306,9 @@ void HTTPTask::run()
 			buf[1] = character_list[current_message_index_];
 			buf[2] = '\0';
 
-			char logbuf[256];
-			snprintf(logbuf, sizeof(logbuf), "Setting splitflap to %s", buf);
-			logger_.log(logbuf);
+			// char logbuf[256];
+			// snprintf(logbuf, sizeof(logbuf), "Setting splitflap to %s", buf);
+			// logger_.log(logbuf);
 
 			// Pad message for display
 			size_t len = 2;
