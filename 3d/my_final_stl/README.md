@@ -68,7 +68,7 @@ Part list:
 		- M3 black hex nut (x4)
 		- M3x8 black (x4)
 	- For each Panel - Left:
-		- M3x8 black (x4)
+		- M3x10 black (x4)
 		- M3 hex nut (x4)
 		- M3x6 black (x1) (for sensor) (Note that this is tight but works - an M3x8 would be fine as well)
 		- M3 black hex nut (x1) (for sensor)
@@ -76,7 +76,7 @@ Part list:
 		- M3x8 black (x6) -- TODO: check!
 		- M3 hex nut (x6)
 	- For each Panel - Back (of any type):
-		- M3x8 button head (x3)
+		- M3x16 button head (x3)
 		- M3 hex nut (x3)
 	- For each Chainlink Buddy Mount:
 		- M3x8 button head (x4) (Board to Mount)
@@ -103,6 +103,7 @@ Assembly instructions:
 		- Nylon nuts don't need this
 	- Highly recommend hex wrenches with ball ends so that they can be used at an angle
 	- All rights/lefts are when looking at the front of the display
+	- Test everything as you go along - although it is possible to split the display in the middle to get at a specific module, it isn't fun
 
 - Preperation before assembly:
 	- Motors: 
@@ -149,7 +150,7 @@ Assembly instructions:
 		1. Attach the last Frame - Left to the Panel - Left with an M3x6 black bolt into a black nut similar to the above steps attaching a Frame - Left to a Frame - Right
 			- Ensure sensor cable routes through the wire channel and isn't pinched
 		1. Add a spool on to the motor
-		1. Attach the Left assembly to the display with 4 M3x8 black bolts through the four frame connectors.
+		1. Attach the Left assembly to the display with 4 M3x10 black bolts through the four frame connectors.
 
 	- Additional rows are the same steps as the first row except:
 		- Skip installing the bottom panel
@@ -159,13 +160,13 @@ Assembly instructions:
 	- Finally:
 		1. Install any moounts and feet not yet installed
 		1. Install Chainlink hardware
-		1. Install back panels, routing power cables through appropriate holes
-		1. Install top panels using black bolts
+		1. Install back panels with M3x16 bolts, routing power cables through the hole in the Back - Buddy
+		1. Install top panels using M3x8 black bolts - using the appropriate top panel for left/center/right sets of three modules
 
 - For a 6 unit wide setup, here is my recommendation for hardware mounts and feet from right to left (from front):
 	- Foot
 	- Driver
-	- Empty (could be a foot for more stability - easy to add later)
+	- Foot
 	- Empty
 	- Driver
 	- Foot + Buddy
@@ -173,13 +174,13 @@ Assembly instructions:
 - For a 12 unit wide setup, here is my recommendation for hardware mounts and feet from right to left (from front):
 	- Foot
 	- Driver
-	- Empty (could be a foot for more stability - easy to add later)
+	- Foot
 	- Empty
 	- Foot + Driver
 	- Empty
 	- Empty
 	- Foot + Driver
 	- Empty
-	- Empty (could be a foot for more stability - easy to add later)
+	- Foot
 	- Driver
 	- Foot + Buddy
