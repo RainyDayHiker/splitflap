@@ -74,8 +74,8 @@
 // Flap option 4 : YOUR CUSTOM CHARACTER SET HERE !
 // Two flap sets, both with the same organization but a-f map to different flaps
 // Char		Main		Weather
-// a		red			sun
-// b		green		cloud
+// a		green		sun
+// b		red 		cloud
 // c		smile		rain
 // d		frown		snow
 // e		fire		wind
@@ -86,6 +86,15 @@ const uint8_t flaps[NUM_FLAPS] = {
 	'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y',
 	'Z', 'a', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'b',
 	'.', '?', '-', '$', '\'', '#', ',', '!', '&', 'c', 'd', 'e', 'f'};
+
+// Default offsets for each module - will be used if no saved config is found
+const uint16_t default_offsets[NUM_MODULES] = {
+	786,
+	1855,
+	398,
+	1876,
+	1928,
+	825};
 
 // 4) Hardware configuration and features
 #ifndef SPLITFLAP_PIO_HARDWARE_CONFIG

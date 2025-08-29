@@ -75,16 +75,22 @@ void setup()
 	splitflapTask.begin();
 	splitflapTask.setConfiguration(&config);
 
+	uint16_t offsets[NUM_MODULES] = {};
 	if (loaded)
 	{
 		PB_PersistentConfiguration saved = config.get();
-		uint16_t offsets[NUM_MODULES] = {};
 		for (uint8_t i = 0; i < min(saved.module_offset_steps_count, (pb_size_t)NUM_MODULES); i++)
 		{
 			offsets[i] = saved.module_offset_steps[i];
 		}
-		splitflapTask.restoreAllOffsets(offsets);
 	}
+	else if (NUM_MODULES >= 6)
+	{
+		serialTask.log("No saved config - using custom default offsets");
+		for (uint8_t i = 0; i < NUM_MODULES; i++)
+			offsets[i] = default_offsets[i];
+	}
+	splitflapTask.restoreAllOffsets(offsets);
 
 #if ENABLE_DISPLAY
 	displayTask.begin();

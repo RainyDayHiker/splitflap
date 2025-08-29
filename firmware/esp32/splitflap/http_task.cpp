@@ -37,7 +37,7 @@ using namespace json11;
 #define REQUEST_INTERVAL_MILLIS (10 * 60 * 1000)
 
 // Cycle the message that's showing more frequently, every 30 seconds (exaggerated for example purposes)
-#define MESSAGE_CYCLE_INTERVAL_MILLIS (5 * 1000)
+#define MESSAGE_CYCLE_INTERVAL_MILLIS (4 * 1000)
 
 // Don't show stale data if it's been too long since successful data load
 #define STALE_TIME_MILLIS (REQUEST_INTERVAL_MILLIS * 3)
@@ -297,22 +297,27 @@ void HTTPTask::run()
 
 		if (update || now - last_message_change_time_ > MESSAGE_CYCLE_INTERVAL_MILLIS)
 		{
-			if (current_message_index_ >= 52)
+			if (current_message_index_ >= 4)
 			{
 				current_message_index_ = 0;
 			}
 
-			buf[0] = character_list[current_message_index_];
-			buf[1] = character_list[current_message_index_];
-			buf[2] = '\0';
+			if (current_message_index_ == 0)
+				snprintf(buf, sizeof(buf), "bHELLO");
+			else if (current_message_index_ == 1)
+				snprintf(buf, sizeof(buf), "WORLD!");
+			else if (current_message_index_ == 2)
+				snprintf(buf, sizeof(buf), "eSPLIT");
+			else if (current_message_index_ == 3)
+				snprintf(buf, sizeof(buf), "FLAPfa");
 
 			// char logbuf[256];
 			// snprintf(logbuf, sizeof(logbuf), "Setting splitflap to %s", buf);
 			// logger_.log(logbuf);
 
-			// Pad message for display
-			size_t len = 2;
-			memset(buf + len, ' ', sizeof(buf) - len);
+			// // Pad message for display
+			// size_t len = 2;
+			// memset(buf + len, ' ', sizeof(buf) - len);
 
 			// splitflap_task_.showString(buf, NUM_MODULES, false);
 

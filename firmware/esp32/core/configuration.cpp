@@ -24,7 +24,7 @@
 #include "configuration.h"
 #include "semaphore_guard.h"
 
-static const char *CONFIG_PATH = "/config.pb";
+static const char *CONFIG_PATH = "/internal/config.pb";
 
 Configuration::Configuration()
 {
@@ -88,7 +88,7 @@ bool Configuration::loadFromDisk()
 		pb_buffer_.module_offset_steps_count);
 	log(buf);
 
-	uint8_t previewN = min(pb_buffer_.module_offset_steps_count, static_cast<pb_size_t>(6));
+	uint8_t previewN = min(pb_buffer_.module_offset_steps_count, static_cast<pb_size_t>(24));
 	snprintf(
 		buf,
 		sizeof(buf),
