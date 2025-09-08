@@ -1,19 +1,98 @@
 #include "webserver_task.h"
 #include <Arduino.h>
+#include <LittleFS.h>
+
+namespace mime
+{
+	enum type
+	{
+		html,
+		htm,
+		txt,
+		css,
+		js,
+		json,
+		png,
+		gif,
+		jpg,
+		jpeg,
+		ico,
+		svg,
+		ttf,
+		otf,
+		woff,
+		woff2,
+		eot,
+		sfnt,
+		xml,
+		pdf,
+		zip,
+		appcache,
+		gz,
+		none,
+		maxType
+	};
+
+	struct Entry
+	{
+		const char *endsWith;
+		const char *mimeType;
+	};
+
+	const Entry mimeTable[maxType] = {
+		{".html", "text/html"},
+		{".htm", "text/html"},
+		{".txt", "text/plain"},
+		{".css", "text/css"},
+		{".js", "application/javascript"},
+		{".json", "application/json"},
+		{".png", "image/png"},
+		{".gif", "image/gif"},
+		{".jpg", "image/jpeg"},
+		{".jpeg", "image/jpeg"},
+		{".ico", "image/x-icon"},
+		{".svg", "image/svg+xml"},
+		{".ttf", "font/ttf"},
+		{".otf", "font/otf"},
+		{".woff", "font/woff"},
+		{".woff2", "font/woff2"},
+		{".eot", "font/eot"},
+		{".sfnt", "font/sfnt"},
+		{".xml", "application/xml"},
+		{".pdf", "application/pdf"},
+		{".zip", "application/zip"},
+		{".appcache", "text/cache-manifest"},
+		{".gz", "application/gzip"},
+		{".none", "application/octet-stream"}};
+
+	String getContentType(const String &path)
+	{
+		for (size_t i = 0; i < maxType; i++)
+		{
+			if (path.endsWith(FPSTR(mimeTable[i].endsWith)))
+			{
+				return String(FPSTR(mimeTable[i].mimeType));
+			}
+		}
+		// Fall-through and just return default type
+		return String(FPSTR(mimeTable[none].mimeType));
+	}
+}
 
 WebServerTask::WebServerTask(Logger &logger, const uint8_t task_core) : Task("WebServer", 4096, 1, task_core),
 																		logger_(logger),
 																		server(nullptr),
 																		running(false)
 {
+	server = new WebServer(SERVER_PORT);
 }
 
 WebServerTask::~WebServerTask()
 {
-	stop();
+	Stop();
 }
 
-bool WebServerTask::begin()
+bool WebServerTask::Start(std::function<bool(String)> handleCaptivePortal)
 {
 	if (running)
 	{
@@ -21,25 +100,10 @@ bool WebServerTask::begin()
 		return true;
 	}
 
-	// Check if WiFi is connected
-	if (WiFi.status() != WL_CONNECTED)
-	{
-		logger_.log("WebServer: WiFi not connected");
-		return false;
-	}
-
-	// Create WebServer instance
-	server = new WebServer(SERVER_PORT);
+	captivePortalHandler = handleCaptivePortal;
 
 	// Set up routes
-	server->on("/", [this]()
-			   { handleRoot(); });
-	server->on("/status", [this]()
-			   { handleStatus(); });
-	server->on("/api", [this]()
-			   { handleAPI(); });
-	server->onNotFound([this]()
-					   { handleNotFound(); });
+	server->onNotFound(std::bind(&WebServerTask::HandlePath, this));
 
 	// Start the server
 	server->begin();
@@ -53,13 +117,10 @@ bool WebServerTask::begin()
 
 	running = true;
 
-	// Start the FreeRTOS task (using the new Task pattern)
-	Task<WebServerTask>::begin();
-
 	return true;
 }
 
-void WebServerTask::stop()
+void WebServerTask::Stop()
 {
 	if (!running)
 	{
@@ -79,14 +140,99 @@ void WebServerTask::stop()
 	logger_.log("WebServer: Stopped");
 }
 
-bool WebServerTask::isRunning() const
+// Helper method to set common headers
+void WebServerTask::setCommonHeaders()
 {
-	return running;
+	server->sendHeader("Cache-Control", "no-cache, no-store, must-revalidate, max-age=0");
+	server->sendHeader("X-Content-Type-Options", "nosniff");
 }
 
-uint16_t WebServerTask::getPort() const
+void WebServerTask::AddHandler(const Uri &uri, std::function<void()> handler)
 {
-	return SERVER_PORT;
+	server->on(uri, handler);
+}
+
+void WebServerTask::AddHandler(const Uri &uri, HTTPMethod method, std::function<void()> handler)
+{
+	server->on(uri, method, handler);
+}
+
+bool WebServerTask::GetRequestArg(const char *name, String &value)
+{
+	if (!server->hasArg(name))
+		return false;
+	value = server->arg(name);
+	return true;
+}
+
+void WebServerTask::HandlePath()
+{
+	char buf[200];
+	snprintf(buf, sizeof(buf), "HTTP request received for URI: %s", server->uri().c_str());
+	logger_.log(buf);
+
+	// If the request is not for our server, then it was from the DNS capture so redirect to our IP and config page
+	if (captivePortalHandler(server->hostHeader()))
+		return;
+
+	String uri = WebServer::urlDecode(server->uri()); // required to read paths with blanks
+	RespondWithFileOr404(uri);
+}
+
+void WebServerTask::RespondWithFileOr404(String uri)
+{
+	// Only for Get and Post
+	if (server->method() == HTTP_GET || server->method() == HTTP_POST)
+	{
+		// If request is for a dir, look for index.html in that dir
+		if (uri.endsWith("/"))
+			uri += "index.html";
+
+		String contentType = mime::getContentType(uri);
+		// Add charset=utf-8 for text content types
+		if (contentType.startsWith("text/"))
+			contentType += "; charset=utf-8";
+
+		char buf[200];
+		snprintf(buf, sizeof(buf), "Looking for file: %s", uri.c_str());
+		logger_.log(buf);
+
+		if (LittleFS.exists(uri))
+		{
+			logger_.log("File found, sending response");
+
+			setCommonHeaders();
+
+			File file = LittleFS.open(uri, "r");
+			server->streamFile(file, contentType);
+			file.close();
+			return;
+		}
+		logger_.log("File not found");
+	}
+
+	// File not found
+	RespondWith404();
+}
+
+void WebServerTask::RespondWith404()
+{
+	setCommonHeaders();
+	server->send(404, "text/plain; charset=utf-8", "File Not Found");
+}
+
+void WebServerTask::RespondWithContent(int responseCode, String response)
+{
+	setCommonHeaders();
+	server->send(responseCode, "text/plain; charset=utf-8", response);
+}
+
+void WebServerTask::Redirect(String uri)
+{
+	setCommonHeaders();
+	server->sendHeader("Location", uri, true);
+	server->send(302, "text/plain; charset=utf-8", ""); // Empty content inhibits Content-length header so we have to close the socket ourselves.
+	server->client().stop();							// Stop is needed because we sent no content length
 }
 
 void WebServerTask::run()
@@ -99,162 +245,4 @@ void WebServerTask::run()
 		}
 		vTaskDelay(pdMS_TO_TICKS(10)); // Small delay to prevent watchdog issues
 	}
-}
-
-void WebServerTask::handleRoot()
-{
-	String html = R"(
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Splitflap Display</title>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <style>
-        body { 
-            font-family: Arial, sans-serif; 
-            margin: 20px; 
-            background-color: #f0f0f0; 
-        }
-        .container { 
-            max-width: 800px; 
-            margin: 0 auto; 
-            background: white; 
-            padding: 20px; 
-            border-radius: 8px; 
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        h1 { 
-            color: #333; 
-            text-align: center; 
-        }
-        .status { 
-            background: #e8f5e8; 
-            padding: 10px; 
-            border-radius: 4px; 
-            margin: 20px 0; 
-        }
-        .nav { 
-            text-align: center; 
-            margin: 20px 0; 
-        }
-        .nav a { 
-            display: inline-block; 
-            margin: 0 10px; 
-            padding: 10px 20px; 
-            background: #007bff; 
-            color: white; 
-            text-decoration: none; 
-            border-radius: 4px; 
-        }
-        .nav a:hover { 
-            background: #0056b3; 
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <h1>Splitflap Display Control</h1>
-        <div class="status">
-            <h3>Device Status</h3>
-            <p><strong>IP Address:</strong> )" +
-				  WiFi.localIP().toString() + R"(</p>
-            <p><strong>MAC Address:</strong> )" +
-				  WiFi.macAddress() + R"(</p>
-            <p><strong>RSSI:</strong> )" +
-				  String(WiFi.RSSI()) + R"( dBm</p>
-            <p><strong>Free Heap:</strong> )" +
-				  String(ESP.getFreeHeap()) + R"( bytes</p>
-            <p><strong>Uptime:</strong> )" +
-				  String(millis() / 1000) + R"( seconds</p>
-        </div>
-        <div class="nav">
-            <a href="/status">Status JSON</a>
-            <a href="/api">API Info</a>
-        </div>
-        <div>
-            <h3>About</h3>
-            <p>This is a basic web interface for the Splitflap Display device. 
-               Use the navigation links above to access different functions.</p>
-        </div>
-    </div>
-</body>
-</html>
-)";
-
-	server->send(200, "text/html", html);
-}
-
-void WebServerTask::handleStatus()
-{
-	String json = "{\n";
-	json += "  \"device\": \"Splitflap Display\",\n";
-	json += "  \"ip\": \"" + WiFi.localIP().toString() + "\",\n";
-	json += "  \"mac\": \"" + WiFi.macAddress() + "\",\n";
-	json += "  \"rssi\": " + String(WiFi.RSSI()) + ",\n";
-	json += "  \"freeHeap\": " + String(ESP.getFreeHeap()) + ",\n";
-	json += "  \"uptime\": " + String(millis() / 1000) + ",\n";
-	json += "  \"running\": " + String(running ? "true" : "false") + "\n";
-	json += "}";
-
-	server->send(200, "application/json", json);
-}
-
-void WebServerTask::handleAPI()
-{
-	String html = R"(
-<!DOCTYPE html>
-<html>
-<head>
-    <title>API Documentation</title>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <style>
-        body { font-family: Arial, sans-serif; margin: 20px; background-color: #f0f0f0; }
-        .container { max-width: 800px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; }
-        .endpoint { background: #f8f9fa; padding: 15px; margin: 10px 0; border-radius: 4px; border-left: 4px solid #007bff; }
-        .method { display: inline-block; padding: 2px 8px; background: #28a745; color: white; border-radius: 3px; font-weight: bold; }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <h1>API Documentation</h1>
-        <p>Available endpoints for the Splitflap Display API:</p>
-        
-        <div class="endpoint">
-            <h3><span class="method">GET</span> /</h3>
-            <p>Main web interface with device status and controls</p>
-        </div>
-        
-        <div class="endpoint">
-            <h3><span class="method">GET</span> /status</h3>
-            <p>Returns device status in JSON format</p>
-        </div>
-        
-        <div class="endpoint">
-            <h3><span class="method">GET</span> /api</h3>
-            <p>This API documentation page</p>
-        </div>
-        
-        <p><a href="/">← Back to main page</a></p>
-    </div>
-</body>
-</html>
-)";
-
-	server->send(200, "text/html", html);
-}
-
-void WebServerTask::handleNotFound()
-{
-	String message = "File Not Found\n\n";
-	message += "URI: " + server->uri() + "\n";
-	message += "Arguments: " + String(server->args()) + "\n";
-
-	for (uint8_t i = 0; i < server->args(); i++)
-	{
-		message += " " + server->argName(i) + ": " + server->arg(i) + "\n";
-	}
-
-	server->send(404, "text/plain", message);
 }

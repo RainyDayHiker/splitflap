@@ -15,30 +15,34 @@ public:
 	~WebServerTask();
 
 	// Initialize and start the webserver
-	bool begin();
+	bool Start(std::function<bool(String)> handleCaptivePortal);
 
 	// Stop the webserver
-	void stop();
+	void Stop();
 
-	// Check if webserver is running
-	bool isRunning() const;
+	void AddHandler(const Uri &uri, std::function<void()> handler);
+	void AddHandler(const Uri &uri, HTTPMethod method, std::function<void()> handler);
 
-	// Get server port
-	uint16_t getPort() const;
+	bool GetRequestArg(const char *name, String &value);
+
+	void RespondWithFileOr404(String uri);
+	void RespondWith404();
+	void RespondWithContent(int responseCode, String response);
+	void Redirect(String uri);
 
 protected:
 	void run();
 
 private:
-	void handleRoot();
-	void handleNotFound();
-	void handleStatus();
-	void handleAPI();
+	void setCommonHeaders(); // Helper method to set security headers
+
+	void HandlePath();
 
 	Logger &logger_;
 	WebServer *server;
 	bool running;
 	static const uint16_t SERVER_PORT = 80;
+	std::function<bool(String)> captivePortalHandler;
 };
 
 #endif // WEBSERVER_TASK_H

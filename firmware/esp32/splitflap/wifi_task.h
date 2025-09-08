@@ -23,6 +23,7 @@
 #include "../core/logger.h"
 #include "../core/task.h"
 #include "display_task.h"
+#include "webserver_task.h"
 
 enum class WiFiState
 {
@@ -38,35 +39,39 @@ class WiFiTask : public Task<WiFiTask>
 	friend class Task<WiFiTask>; // Allow base Task to invoke protected run()
 
 public:
-	WiFiTask(DisplayTask &display_task, Logger &logger, const uint8_t task_core);
+	WiFiTask(DisplayTask &display_task, WebServerTask &web_server_task, Logger &logger, const uint8_t task_core);
 
-	// Check if WiFi is connected and time is synced
-	bool isReady() const;
+	bool HandleCaptivePortal(String serverHostname);
 
-	// Check if WiFi is connected (but time may not be synced yet)
-	bool isConnected() const;
-
-	// Get current WiFi state
-	WiFiState getState() const;
-
-	// Get WiFi status string for display
-	String getStatusString() const;
+	void Setup();
 
 protected:
 	void run();
 
 private:
-	void connectWifi();
-	void updateState();
+	void ConfigModeStart();
+	void ConfigModeStop(String ssid = "", String password = "");
+	void UpdateSSID(String ssid, String password);
+
+	void RedirectToConfig();
+
+	void HandleWifiSetup();
+
+	void HandleConfigPage();
+	void UpdateNetworkSettings();
+	void GetNetworkList();
+
 	void updateDisplayStatus();
 
 	DisplayTask &display_task_;
+	WebServerTask &web_server_task_;
 	Logger &logger_;
 
-	WiFiState state_;
-	uint32_t last_connection_attempt_;
-	uint32_t last_status_update_;
+	bool _inConfigMode;
+	bool _attemptingNewSSID;
+	String _hostNameFQDN;
+	wl_status_t _lastWiFiStatus;
 
-	static const uint32_t CONNECTION_RETRY_INTERVAL = 10000; // 10 seconds
-	static const uint32_t STATUS_UPDATE_INTERVAL = 5000;	 // 5 seconds
+	uint32_t last_status_update_;
+	static const uint32_t STATUS_UPDATE_INTERVAL = 10 * 1000;
 };

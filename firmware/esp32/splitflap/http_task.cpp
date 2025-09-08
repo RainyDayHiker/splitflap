@@ -38,7 +38,7 @@ using namespace json11;
 #define REQUEST_INTERVAL_MILLIS (10 * 60 * 1000)
 
 // Cycle the message that's showing more frequently, every 30 seconds (exaggerated for example purposes)
-#define MESSAGE_CYCLE_INTERVAL_MILLIS (4 * 1000)
+#define MESSAGE_CYCLE_INTERVAL_MILLIS (5 * 1000)
 
 // Don't show stale data if it's been too long since successful data load
 #define STALE_TIME_MILLIS (REQUEST_INTERVAL_MILLIS * 3)
@@ -254,26 +254,9 @@ void HTTPTask::run()
 	char buf[max(NUM_MODULES + 1, 200)];
 	char character_list[] = " ABCDEFGHIJKLMNOPQRSTUVWXYZa0123456789b.?-$'#,!&cdef";
 
-	// Wait for WiFi to be ready
-	while (!wifi_task_.isReady())
-	{
-		logger_.log("HTTP: Waiting for WiFi to be ready...");
-		delay(5000);
-	}
-
-	logger_.log("HTTP: WiFi is ready, starting HTTP task");
-
 	bool stale = false;
 	while (1)
 	{
-		// Check if WiFi is still ready, if not wait for it
-		if (!wifi_task_.isReady())
-		{
-			logger_.log("HTTP: WiFi not ready, waiting...");
-			delay(5000);
-			continue;
-		}
-
 		// Check to see if we have a good time sync
 		if (LocalTime::IsTimeCloseToDefaultTime())
 		{
@@ -285,24 +268,24 @@ void HTTPTask::run()
 		long now = millis();
 
 		bool update = false;
-		if (http_last_request_time_ == 0 || now - http_last_request_time_ > REQUEST_INTERVAL_MILLIS)
-		{
-			if (fetchData())
-			{
-				http_last_success_time_ = millis();
-				stale = false;
-				update = true;
-			}
-			http_last_request_time_ = millis();
-		}
+		// if (http_last_request_time_ == 0 || now - http_last_request_time_ > REQUEST_INTERVAL_MILLIS)
+		// {
+		// 	if (fetchData())
+		// 	{
+		// 		http_last_success_time_ = millis();
+		// 		stale = false;
+		// 		update = true;
+		// 	}
+		// 	http_last_request_time_ = millis();
+		// }
 
-		if (!stale && http_last_success_time_ > 0 && millis() - http_last_success_time_ > STALE_TIME_MILLIS)
-		{
-			stale = true;
-			messages_.clear();
-			messages_.push_back("stale");
-			update = true;
-		}
+		// if (!stale && http_last_success_time_ > 0 && millis() - http_last_success_time_ > STALE_TIME_MILLIS)
+		// {
+		// 	stale = true;
+		// 	messages_.clear();
+		// 	messages_.push_back("stale");
+		// 	update = true;
+		// }
 
 		if (update || now - last_message_change_time_ > MESSAGE_CYCLE_INTERVAL_MILLIS)
 		{

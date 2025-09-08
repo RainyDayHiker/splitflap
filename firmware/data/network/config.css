@@ -1,0 +1,30 @@
+body {
+	padding: 10px;
+}
+
+form {
+	display: table;
+}
+
+div.settings-row {
+	display: table-row;
+}
+
+div.network_name {
+	color: blue;
+}
+
+div.network_name:hover {
+	text-decoration: underline;
+	cursor: pointer;
+}
+
+label,
+input {
+	display: table-cell;
+	margin-bottom: 10px;
+}
+
+label {
+	padding-bottom: 5px;
+}

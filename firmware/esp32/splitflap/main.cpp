@@ -17,7 +17,7 @@
 #include <Arduino.h>
 #include <TFT_eSPI.h>
 #include <Wire.h>
-#include <LITTLEFS.h>
+#include <LittleFS.h>
 
 #include "config.h"
 
@@ -26,10 +26,9 @@
 #include "debug_build_info.h"
 #include "display_task.h"
 #include "serial_task.h"
-
-#if ENABLE_DISPLAY || HTTP || MQTT
+#include "webserver_task.h"
 #include "wifi_task.h"
-#endif
+#include "LocalTime.h"
 
 Configuration config;
 
@@ -40,9 +39,8 @@ SerialTask serialTask(splitflapTask, 0);
 DisplayTask displayTask(splitflapTask, 0);
 #endif
 
-#if ENABLE_DISPLAY || HTTP || MQTT
-WiFiTask wifiTask(displayTask, serialTask, 0);
-#endif
+WebServerTask webServerTask(serialTask, 0);
+WiFiTask wifiTask(displayTask, webServerTask, serialTask, 0);
 
 #ifdef CHAINLINK_BASE
 #include "../base/base_supervisor_task.h"
@@ -58,15 +56,17 @@ MQTTTask mqttTask(splitflapTask, displayTask, serialTask, 0);
 #include "http_task.h"
 HTTPTask httpTask(splitflapTask, displayTask, wifiTask, serialTask, 0);
 #endif
-#include "LocalTime.h"
 
 void setup()
 {
 	serialTask.begin();
 
-	if (!LITTLEFS.begin(true /*FORMAT_LITTLEFS_IF_FAILED*/))
+	serialTask.log("Start");
+
+	if (!LittleFS.begin(false /*FORMAT_LITTLEFS_IF_FAILED*/))
 	{
-		Serial.println("LITTLEFS Mount Failed");
+		serialTask.log("LittleFS Mount Failed");
+		delay(10000);
 		return;
 	}
 
@@ -97,13 +97,13 @@ void setup()
 	LocalTime::setupTime(LocalTime::TimeZone::LosAngeles);
 	// TODO: Setup config to store this
 
+	wifiTask.Setup();
+
 #if ENABLE_DISPLAY
 	displayTask.begin();
 #endif
 
-#if ENABLE_DISPLAY || HTTP || MQTT
 	wifiTask.begin();
-#endif
 
 #if MQTT
 	mqttTask.begin();
@@ -116,6 +116,9 @@ void setup()
 #ifdef CHAINLINK_BASE
 	baseSupervisorTask.begin();
 #endif
+
+	webServerTask.Start(std::bind(&WiFiTask::HandleCaptivePortal, &wifiTask, std::placeholders::_1));
+	webServerTask.begin();
 
 	logDebugBuildInfo(serialTask);
 

@@ -13,7 +13,7 @@
    See the License for the specific language governing permissions and
    limitations under the License.
 */
-#include <LITTLEFS.h>
+#include <LittleFS.h>
 
 #include "pb_decode.h"
 #include "pb_encode.h"
@@ -41,7 +41,7 @@ bool Configuration::loadFromDisk()
 {
 	SemaphoreGuard lock(mutex_);
 
-	File f = LITTLEFS.open(CONFIG_PATH);
+	File f = LittleFS.open(CONFIG_PATH);
 	if (!f)
 	{
 		log("Failed to read config file");
@@ -123,7 +123,7 @@ bool Configuration::saveToDisk()
 		return false;
 	}
 
-	File f = LITTLEFS.open(CONFIG_PATH, FILE_WRITE);
+	File f = LittleFS.open(CONFIG_PATH, FILE_WRITE);
 	if (!f)
 	{
 		log("Failed to open config file");

@@ -15,7 +15,7 @@
 */
 #pragma once
 
-#include <LITTLEFS.h>
+#include <LittleFS.h>
 #include <PacketSerial.h>
 
 #include "../proto_gen/splitflap.pb.h"

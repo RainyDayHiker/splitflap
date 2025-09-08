@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="UTF-8" />
+	<meta name="viewport"
+		  content="width=device-width, initial-scale=1" />
+	<title>Wifi Configuration</title>
+	<link rel="stylesheet"
+		  href="config.css" />
+	<script src="config.js"></script>
+</head>
+
+<body>
+	<form method="get"
+		  action="network_update">
+		<div class="settings-row">
+			<label for="ssid">Wifi Network: </label>
+		</div>
+		<div class="settings-row">
+			<input name="ssid"
+				   length="32"
+				   type="text"
+				   id="ssid"
+				   required>
+		</div>
+		<div class="settings-row">
+			<label for="pass">Wifi Password: </label>
+		</div>
+		<div class="settings-row">
+			<input name="pass"
+				   length="64"
+				   type="text"
+				   id="pass">
+		</div>
+		<div class="settings-row">
+			<input type="submit"
+				   value="Connect">
+		</div>
+	</form>
+
+	<div>
+		<label id="network_list_status"></label>
+		<table id="network_list">
+		</table>
+		<br/>
+		<a href="/">Main page</a>
+	</div>
+</body>
+
+</html>
