@@ -16,21 +16,17 @@
 #pragma once
 
 #include <Arduino.h>
-#include <json11.hpp>
-#include <WiFi.h>
 
 #include "../core/logger.h"
 #include "../core/splitflap_task.h"
 #include "../core/task.h"
 
-#include "LocalTime.h"
-
-class ClockTask : public Task<ClockTask>
+class Clock : public Task<Clock>
 {
-	friend class Task<ClockTask>; // Allow base Task to invoke protected run()
+	friend class Task<Clock>; // Allow base Task to invoke protected run()
 
 public:
-	ClockTask(SplitflapTask &splitflap_task, Logger &logger, const uint8_t task_core);
+	Clock(SplitflapTask &splitflap_task, Logger &logger, const uint8_t task_core);
 
 protected:
 	void run();

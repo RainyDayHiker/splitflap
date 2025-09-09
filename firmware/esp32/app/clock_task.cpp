@@ -17,13 +17,13 @@
 
 #include "LocalTime.h"
 
-ClockTask::ClockTask(SplitflapTask &splitflap_task, Logger &logger, const uint8_t task_core) : Task("Clock", 8192, 1, task_core),
-																							   splitflap_task_(splitflap_task),
-																							   logger_(logger)
+Clock::Clock(SplitflapTask &splitflap_task, Logger &logger, const uint8_t task_core) : Task("Clock", 8192, 1, task_core),
+																					   splitflap_task_(splitflap_task),
+																					   logger_(logger)
 {
 }
 
-void ClockTask::run()
+void Clock::run()
 {
 	char buf[max(NUM_MODULES + 1, 200)];
 	char character_list[] = " ABCDEFGHIJKLMNOPQRSTUVWXYZa0123456789b.?-$'#,!&cdef";
@@ -50,7 +50,7 @@ void ClockTask::run()
 					if (emoji == 'g')
 						emoji = '!';
 					snprintf(buf, sizeof(buf), "%s%c", temp, emoji);
-					logger_.logf("ClockTask: updating time to %s", buf);
+					logger_.logf("Clock: updating time to %s", buf);
 					splitflap_task_.showString(buf, NUM_MODULES, false);
 					delay(55 * 1000);
 				}

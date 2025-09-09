@@ -22,7 +22,7 @@
 
 #include "../core/logger.h"
 #include "../core/task.h"
-#include "display_task.h"
+#include "../splitflap/display_task.h"
 #include "webserver_task.h"
 
 enum class WiFiState

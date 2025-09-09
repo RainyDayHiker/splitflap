@@ -15,7 +15,7 @@
 */
 
 #include "wifi_task.h"
-#include "secrets.h"
+#include "../splitflap/secrets.h"
 #include <ESPmDNS.h>
 #include <DNSServer.h>
 
