@@ -51,11 +51,14 @@ BaseSupervisorTask baseSupervisorTask(splitflapTask, serialTask, 0);
 #include "mqtt_task.h"
 MQTTTask mqttTask(splitflapTask, displayTask, serialTask, 0);
 #endif
+#include "clock_task.h"
 
 #if HTTP
-#include "http_task.h"
-HTTPTask httpTask(splitflapTask, displayTask, wifiTask, serialTask, 0);
+// #include "http_task.h"
+// HTTPTask httpTask(splitflapTask, displayTask, wifiTask, serialTask, 0);
 #endif
+
+ClockTask clockTask(splitflapTask, serialTask, 0);
 
 void setup()
 {
@@ -106,7 +109,7 @@ void setup()
 #endif
 
 #if HTTP
-	httpTask.begin();
+	// httpTask.begin();
 #endif
 
 #ifdef CHAINLINK_BASE
@@ -115,6 +118,8 @@ void setup()
 
 	webServerTask.Start(std::bind(&WiFiTask::HandleCaptivePortal, &wifiTask, std::placeholders::_1));
 	webServerTask.begin();
+
+	clockTask.begin();
 
 	logDebugBuildInfo(serialTask);
 
