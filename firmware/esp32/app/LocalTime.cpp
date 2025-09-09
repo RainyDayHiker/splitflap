@@ -79,7 +79,7 @@ time_t LocalTime::GetCurrentTime(tm *timeLocal, tm *timeUTC)
 	return now;
 }
 
-bool LocalTime::IsTimeCloseToDefaultTime()
+bool LocalTime::HasTimeSyncHappened()
 {
 	time_t now = time(nullptr);
 

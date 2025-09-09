@@ -20,7 +20,7 @@ public:
 
 	static time_t GetCurrentTime(struct tm *timeLocal, struct tm *timeUTC = nullptr);
 
-	static bool IsTimeCloseToDefaultTime();
+	static bool HasTimeSyncHappened();
 
 	static char *DateTimeString(char *buffer, size_t size, time_t time);
 

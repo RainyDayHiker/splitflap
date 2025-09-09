@@ -18,8 +18,8 @@
 #include "LocalTime.h"
 
 Clock::Clock(SplitflapTask &splitflapTask, Logger &logger, const uint8_t task_core) : Task("Clock", 8192, 1, task_core),
-																					   splitFlap(splitflapTask),
-																					   logger(logger)
+																					  splitFlap(splitflapTask),
+																					  logger(logger)
 {
 }
 
@@ -30,7 +30,7 @@ void Clock::run()
 	while (1)
 	{
 		// Check to see if we have a good time sync
-		if (!LocalTime::IsTimeCloseToDefaultTime())
+		if (!LocalTime::HasTimeSyncHappened())
 		{
 			struct tm timeinfo;
 			LocalTime::GetCurrentTime(&timeinfo);
@@ -57,7 +57,17 @@ void Clock::run()
 					delay(500);
 			}
 			else
+			{
+				if (!currentTime.equals(""))
+				{
+					currentTime = "";
+					logger.log("Clock: Nighttime, clearing display");
+					for (int i = 0; i < NUM_MODULES; i++)
+						buf[i] = ' ';
+					splitFlap.showString(buf, NUM_MODULES, false);
+				}
 				delay(60 * 1000);
+			}
 		}
 		else
 			delay(1000);
