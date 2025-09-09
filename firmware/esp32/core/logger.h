@@ -5,7 +5,7 @@
    you may not use this file except in compliance with the License.
    You may obtain a copy of the License at
 
-       http://www.apache.org/licenses/LICENSE-2.0
+	   http://www.apache.org/licenses/LICENSE-2.0
 
    Unless required by applicable law or agreed to in writing, software
    distributed under the License is distributed on an "AS IS" BASIS,
@@ -14,11 +14,22 @@
    limitations under the License.
 */
 #pragma once
+#include <Arduino.h>
 
-class Logger {
-    public:
-        Logger() {};
-        virtual ~Logger() {};
-        virtual void log(const char* msg) = 0;
-    
+class Logger
+{
+public:
+	Logger() {};
+	virtual ~Logger() {};
+	virtual void log(const char *msg) = 0;
+	// Log a formatted message, similar to printf
+	virtual void logf(const char *format, ...)
+	{
+		char buffer[256];
+		va_list args;
+		va_start(args, format);
+		vsnprintf(buffer, sizeof(buffer), format, args);
+		va_end(args);
+		log(buffer);
+	}
 };

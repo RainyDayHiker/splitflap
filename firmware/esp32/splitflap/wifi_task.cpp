@@ -17,8 +17,11 @@
 #include "wifi_task.h"
 #include "secrets.h"
 #include <ESPmDNS.h>
-#include <ESP_DoubleResetDetector.h>
 #include <DNSServer.h>
+
+#define ESP_DRD_USE_LITTLEFS true
+#include <ESP_DoubleResetDetector.h>
+#include <esp_wifi.h>
 
 // Default to no SSID or PASSWORD but they can be overridden by build options
 #ifndef WIFI_SSID
@@ -45,8 +48,8 @@ boolean isIp(String str)
 	return true;
 }
 
-DNSServer dnsServer;
-DoubleResetDetector doubleResetDetector(5 /* timeout in secs */, 0 /* RTC Memory address*/);
+DNSServer *dnsServer;
+DoubleResetDetector *doubleResetDetector;
 uint32_t configModeStartTime = 0;
 
 WiFiTask::WiFiTask(DisplayTask &display_task, WebServerTask &web_server_task, Logger &logger, const uint8_t task_core)
@@ -54,17 +57,19 @@ WiFiTask::WiFiTask(DisplayTask &display_task, WebServerTask &web_server_task, Lo
 	  display_task_(display_task),
 	  web_server_task_(web_server_task),
 	  logger_(logger),
-	  _lastWiFiStatus(WL_NO_SHIELD),
-	  last_status_update_(0)
+	  last_status_ssid("")
 {
 	_hostNameFQDN = DEVICE_INSTANCE_NAME;
 	_hostNameFQDN += ".local";
 	_hostNameFQDN.toLowerCase();
+
+	_apHostName = DEVICE_INSTANCE_NAME;
+	_apHostName += String((long)ESP.getEfuseMac(), HEX);
 }
 
 void WiFiTask::Setup()
 {
-	logger_.log("wifi: setup");
+	doubleResetDetector = new DoubleResetDetector(5 /* timeout in secs */, 0 /* RTC Memory address*/);
 
 	WiFi.persistent(true);
 	WiFi.setAutoConnect(true);
@@ -72,22 +77,39 @@ void WiFiTask::Setup()
 	// Disable WiFi sleep as it causes glitches on pin 39;
 	// see https://github.com/espressif/arduino-esp32/issues/4903#issuecomment-793187707
 	WiFi.setSleep(WIFI_PS_NONE);
-	WiFi.begin();
 
-	MDNS.begin(DEVICE_INSTANCE_NAME);
-	MDNS.addService("http", "tcp", 80);
-
-	if (doubleResetDetector.detectDoubleReset())
+	if (doubleResetDetector->detectDoubleReset())
 	{
 		// Double reset occurred, start config mode
+		// This can be used to force the device into AP mode for configuration even with cached credentials
 		logger_.log("wifi: Double reset detected");
 		ConfigModeStart();
 	}
-	else if (wifiSSID != "" && wifiPassword != "")
+	else
 	{
-		logger_.log("wifi: Attempting to use build provided ssid and password");
-		WiFi.begin(wifiSSID.c_str(), wifiPassword.c_str());
+		// check for cached WiFi credentials
+		wifi_config_t cachedConfig;
+		esp_err_t configResult = esp_wifi_get_config((wifi_interface_t)ESP_IF_WIFI_STA, &cachedConfig);
+		if (configResult == ESP_OK && strlen((const char *)cachedConfig.ap.ssid) > 0)
+		{
+			logger_.logf("wifi: cached SSID: %s found, connecting", cachedConfig.ap.ssid);
+			WiFi.begin();
+		}
+		else if (wifiSSID != "" && wifiPassword != "")
+		{
+			logger_.logf("wifi: Attempting to use build provided ssid (%s) and password", wifiSSID.c_str());
+			WiFi.begin(wifiSSID.c_str(), wifiPassword.c_str());
+		}
+		else
+		{
+			// No creds, so start in AP mode
+			ConfigModeStart();
+		}
 	}
+
+	// Setup MDNS
+	MDNS.begin(DEVICE_INSTANCE_NAME);
+	MDNS.addService("http", "tcp", 80);
 
 	// Register Page Handlers for the WebServer
 	// Wifi setup
@@ -105,51 +127,14 @@ void WiFiTask::run()
 {
 	while (true)
 	{
-		doubleResetDetector.loop();
+		doubleResetDetector->loop();
+
+		if (dnsServer)
+			dnsServer->processNextRequest();
 
 		// Turn off config mode after 10 minutes so that the device isn't in AP mode forever - a reboot will restart it
 		if (_inConfigMode && (millis() - configModeStartTime > 1000 * 60 * 10))
 			ConfigModeStop();
-
-		wl_status_t currentState = WiFi.status();
-		if (currentState != _lastWiFiStatus)
-		{
-			switch (currentState)
-			{
-			case WL_CONNECTED:
-			{
-				char msg[100];
-				snprintf(msg, sizeof(msg), "wifi: Connected to %s, IP: %s", WiFi.SSID().c_str(), WiFi.localIP().toString().c_str());
-				logger_.log(msg);
-
-				_attemptingNewSSID = false;
-				_inConfigMode = false;
-
-				break;
-			}
-			case WL_NO_SSID_AVAIL:
-			case WL_CONNECT_FAILED:
-			case WL_IDLE_STATUS:
-			case WL_DISCONNECTED:
-				char msg[100];
-				snprintf(msg, sizeof(msg), "wifi: New state: %d", currentState);
-				logger_.log(msg);
-				_attemptingNewSSID = false;
-				// if (!_inConfigMode)
-				// 	ConfigModeStart();
-				break;
-			case WL_SCAN_COMPLETED:
-				logger_.log("wifi: Scan completed");
-				break;
-			case WL_NO_SHIELD:
-				logger_.log("wifi: No shield");
-				break;
-			default:
-				logger_.log("wifi: Unknown status");
-				break;
-			}
-			_lastWiFiStatus = currentState;
-		}
 
 		updateDisplayStatus();
 
@@ -162,6 +147,7 @@ bool WiFiTask::HandleCaptivePortal(String serverHostname)
 	serverHostname.toLowerCase();
 	if (!isIp(serverHostname) && serverHostname != _hostNameFQDN)
 	{
+		logger_.log("wifi: captive portal redirect to config");
 		RedirectToConfig();
 		return true;
 	}
@@ -170,26 +156,37 @@ bool WiFiTask::HandleCaptivePortal(String serverHostname)
 
 void WiFiTask::ConfigModeStart()
 {
-	logger_.log("wifi: starting AP mode");
+	if (_inConfigMode)
+		return;
+
 	_inConfigMode = true;
 	configModeStartTime = millis();
 
 	WiFi.mode(WIFI_AP);
-	String ssid = DEVICE_INSTANCE_NAME;
-	ssid += "_" + String((long)ESP.getEfuseMac(), HEX);
-	WiFi.softAP(ssid.c_str(), AP_PASSWORD);
+	WiFi.softAP(_apHostName.c_str(), AP_PASSWORD);
+	logger_.logf("wifi: starting AP mode: %s", _apHostName.c_str());
 	delay(100); // Pause for it to start
 
 	// Setup DNS to redirect all domains to the AP
-	dnsServer.setErrorReplyCode(DNSReplyCode::NoError);
-	dnsServer.start(53, "*", WiFi.softAPIP());
+	dnsServer = new DNSServer();
+	dnsServer->setErrorReplyCode(DNSReplyCode::NoError);
+	dnsServer->start(53, "*", WiFi.softAPIP());
 }
 
 void WiFiTask::ConfigModeStop(String ssid, String password)
 {
+	if (!_inConfigMode)
+		return;
+
 	logger_.log("wifi: stopping AP mode");
 	_inConfigMode = false;
-	dnsServer.stop();
+
+	if (dnsServer)
+	{
+		dnsServer->stop();
+		dnsServer = nullptr;
+	}
+
 	WiFi.mode(WIFI_STA);
 	if (ssid == "")
 		WiFi.begin();
@@ -288,15 +285,11 @@ void WiFiTask::GetNetworkList()
 
 void WiFiTask::updateDisplayStatus()
 {
-	uint32_t now = millis();
-	if (now - last_status_update_ > STATUS_UPDATE_INTERVAL)
+	String ssid = "WiFi: " + (_inConfigMode ? ("AP: " + _apHostName) : WiFi.SSID());
+	if (!ssid.equals(last_status_ssid))
 	{
-		// Update display with current status less frequently to avoid spam
-		wl_status_t status = WiFi.status();
-		char msg[100];
-		snprintf(msg, sizeof(msg), "wifi: State: %d, %d", status, _lastWiFiStatus);
-		logger_.log(msg);
-		display_task_.setMessage(1, msg); // TODO: Update this
-		last_status_update_ = now;
+		last_status_ssid = ssid;
+		logger_.log(ssid.c_str());
+		display_task_.setMessage(1, ssid.c_str());
 	}
 }

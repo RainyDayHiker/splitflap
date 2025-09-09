@@ -70,8 +70,7 @@ private:
 	bool _inConfigMode;
 	bool _attemptingNewSSID;
 	String _hostNameFQDN;
-	wl_status_t _lastWiFiStatus;
+	String _apHostName;
 
-	uint32_t last_status_update_;
-	static const uint32_t STATUS_UPDATE_INTERVAL = 10 * 1000;
+	String last_status_ssid;
 };
