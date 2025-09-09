@@ -25,6 +25,7 @@ Print settings:
 	- No supports needed - there are overhangs, but they'll print well enough on a good printer
 	- Orientation of parts should be correct
 	- Whatever build plate gives the surface you want on the Side and Top panels
+	- NOTE: Spool halves are very thin - if you find them challenging to print on your printer, the spools from the original design should be identical in dimensions and usable instead
 	- Rubber Foot in TPU
 
 Part list:
@@ -113,7 +114,7 @@ Assembly instructions:
 	
 	- Spool:
 		- Two halves should slide together and notch in with the tabs
-		- Add a flap and, if needed, slightly twist the spool to make sure the flap is not twisted
+		- Add one flap and, if needed, slightly twist the spool to make sure the flap is not twisted
 			- If you put the spool on a flat surface with the flap extending out perpendicularly, the flap and the surface should be at right angles
 			- A small bit of glue can be used to lock things in place but I have not found it necessary
 		- Add the rest of the flaps
