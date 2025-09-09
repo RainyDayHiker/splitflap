@@ -24,25 +24,24 @@
 #include "../core/task.h"
 
 #include "display_task.h"
-#include "wifi_task.h"
 
 class HTTPTask : public Task<HTTPTask>
 {
 	friend class Task<HTTPTask>; // Allow base Task to invoke protected run()
 
 public:
-	HTTPTask(SplitflapTask &splitflap_task, DisplayTask &display_task, WiFiTask &wifi_task, Logger &logger, const uint8_t task_core);
+	HTTPTask(SplitflapTask &splitflap_task, DisplayTask &display_task, Logger &logger, const uint8_t task_core);
 
 protected:
 	void run();
 
 private:
+	void connectWifi();
 	bool fetchData();
 	bool handleData(json11::Json json);
 
 	SplitflapTask &splitflap_task_;
 	DisplayTask &display_task_;
-	WiFiTask &wifi_task_;
 	Logger &logger_;
 	WiFiClient wifi_client_;
 	uint32_t http_last_request_time_ = 0;

@@ -17,9 +17,11 @@
 #include "http_task.h"
 
 #include <HTTPClient.h>
+#include <lwip/apps/sntp.h>
 #include <json11.hpp>
 #include <time.h>
-#include "LocalTime.h"
+
+#include "secrets.h"
 
 using namespace json11;
 
@@ -38,7 +40,7 @@ using namespace json11;
 #define REQUEST_INTERVAL_MILLIS (10 * 60 * 1000)
 
 // Cycle the message that's showing more frequently, every 30 seconds (exaggerated for example purposes)
-#define MESSAGE_CYCLE_INTERVAL_MILLIS (5 * 1000)
+#define MESSAGE_CYCLE_INTERVAL_MILLIS (30 * 1000)
 
 // Don't show stale data if it's been too long since successful data load
 #define STALE_TIME_MILLIS (REQUEST_INTERVAL_MILLIS * 3)
@@ -46,13 +48,15 @@ using namespace json11;
 // Public token for synoptic data api (it's not secret, but please don't abuse it)
 #define SYNOPTICDATA_TOKEN "e763d68537d9498a90fa808eb9d415d9"
 
+// Timezone for local time strings; this is America/Los_Angeles. See https://github.com/nayarsystems/posix_tz_db/blob/master/zones.csv
+#define TIMEZONE "PST8PDT,M3.2.0,M11.1.0"
+
 bool HTTPTask::fetchData()
 {
 	char buf[200];
 	uint32_t start = millis();
 	HTTPClient http;
 
-	return false;
 	// Construct the http request
 	http.begin("https://api.synopticdata.com/v2/stations/latest?&token=" SYNOPTICDATA_TOKEN "&within=30&units=english&vars=air_temp,wind_speed&varsoperator=and&radius=37.765157,-122.419702,4&limit=20&fields=stid");
 
@@ -78,7 +82,6 @@ bool HTTPTask::fetchData()
 
 		if (err.empty())
 		{
-			logger_.log(data.c_str());
 			return handleData(json);
 		}
 		else
@@ -240,82 +243,138 @@ bool HTTPTask::handleData(Json json)
 	return true;
 }
 
-HTTPTask::HTTPTask(SplitflapTask &splitflap_task, DisplayTask &display_task, WiFiTask &wifi_task, Logger &logger, const uint8_t task_core) : Task("HTTP", 8192, 1, task_core),
-																																			 splitflap_task_(splitflap_task),
-																																			 display_task_(display_task),
-																																			 wifi_task_(wifi_task),
-																																			 logger_(logger),
-																																			 wifi_client_()
+HTTPTask::HTTPTask(SplitflapTask &splitflap_task, DisplayTask &display_task, Logger &logger, const uint8_t task_core) : Task("HTTP", 8192, 1, task_core),
+																														splitflap_task_(splitflap_task),
+																														display_task_(display_task),
+																														logger_(logger),
+																														wifi_client_()
 {
+}
+
+void HTTPTask::connectWifi()
+{
+	WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+
+	// Disable WiFi sleep as it causes glitches on pin 39; see https://github.com/espressif/arduino-esp32/issues/4903#issuecomment-793187707
+	WiFi.setSleep(WIFI_PS_NONE);
+
+	char buf[256];
+
+	logger_.log("Establishing connection to WiFi..");
+	snprintf(buf, sizeof(buf), "Wifi connecting to %s", WIFI_SSID);
+	display_task_.setMessage(1, String(buf));
+	while (WiFi.status() != WL_CONNECTED)
+	{
+		delay(1000);
+	}
+
+	snprintf(buf, sizeof(buf), "Connected to network %s", WIFI_SSID);
+	logger_.log(buf);
+
+	// Sync SNTP
+	sntp_setoperatingmode(SNTP_OPMODE_POLL);
+
+	char server[] = "time.nist.gov"; // sntp_setservername takes a non-const char*, so use a non-const variable to avoid warning
+	sntp_setservername(0, server);
+	sntp_init();
+
+	logger_.log("Waiting for NTP time sync...");
+	snprintf(buf, sizeof(buf), "Syncing NTP time via %s...", server);
+	display_task_.setMessage(1, String(buf));
+	time_t now;
+	while (time(&now), now < 1625099485)
+	{
+		delay(1000);
+	}
+
+	setenv("TZ", TIMEZONE, 1);
+	tzset();
+	strftime(buf, sizeof(buf), "Got time: %Y-%m-%d %H:%M:%S", localtime(&now));
+	logger_.log(buf);
 }
 
 void HTTPTask::run()
 {
 	char buf[max(NUM_MODULES + 1, 200)];
-	char character_list[] = " ABCDEFGHIJKLMNOPQRSTUVWXYZa0123456789b.?-$'#,!&cdef";
+
+	connectWifi();
 
 	bool stale = false;
 	while (1)
 	{
-		// Check to see if we have a good time sync
-		if (LocalTime::IsTimeCloseToDefaultTime())
-		{
-			logger_.log("HTTP: Time is not synced, waiting...");
-			delay(5000);
-			continue;
-		}
-
 		long now = millis();
 
 		bool update = false;
-		// if (http_last_request_time_ == 0 || now - http_last_request_time_ > REQUEST_INTERVAL_MILLIS)
-		// {
-		// 	if (fetchData())
-		// 	{
-		// 		http_last_success_time_ = millis();
-		// 		stale = false;
-		// 		update = true;
-		// 	}
-		// 	http_last_request_time_ = millis();
-		// }
+		if (http_last_request_time_ == 0 || now - http_last_request_time_ > REQUEST_INTERVAL_MILLIS)
+		{
+			if (fetchData())
+			{
+				http_last_success_time_ = millis();
+				stale = false;
+				update = true;
+			}
+			http_last_request_time_ = millis();
+		}
 
-		// if (!stale && http_last_success_time_ > 0 && millis() - http_last_success_time_ > STALE_TIME_MILLIS)
-		// {
-		// 	stale = true;
-		// 	messages_.clear();
-		// 	messages_.push_back("stale");
-		// 	update = true;
-		// }
+		if (!stale && http_last_success_time_ > 0 && millis() - http_last_success_time_ > STALE_TIME_MILLIS)
+		{
+			stale = true;
+			messages_.clear();
+			messages_.push_back("stale");
+			update = true;
+		}
 
 		if (update || now - last_message_change_time_ > MESSAGE_CYCLE_INTERVAL_MILLIS)
 		{
-			if (current_message_index_ >= 4)
+			if (current_message_index_ >= messages_.size())
 			{
 				current_message_index_ = 0;
 			}
 
-			if (current_message_index_ == 0)
-				snprintf(buf, sizeof(buf), "bHELLO");
-			else if (current_message_index_ == 1)
-				snprintf(buf, sizeof(buf), "WORLD!");
-			else if (current_message_index_ == 2)
-				snprintf(buf, sizeof(buf), "eSPLIT");
-			else if (current_message_index_ == 3)
-				snprintf(buf, sizeof(buf), "FLAPfa");
+			if (messages_.size() > 0)
+			{
+				String message = messages_[current_message_index_].c_str();
 
-			// char logbuf[256];
-			// snprintf(logbuf, sizeof(logbuf), "Setting splitflap to %s", buf);
-			// logger_.log(logbuf);
+				snprintf(buf, sizeof(buf), "Cycling to next message: %s", message.c_str());
+				logger_.log(buf);
 
-			// // Pad message for display
-			// size_t len = 2;
-			// memset(buf + len, ' ', sizeof(buf) - len);
+				// Pad message for display
+				size_t len = strlcpy(buf, message.c_str(), sizeof(buf));
+				memset(buf + len, ' ', sizeof(buf) - len);
 
-			// splitflap_task_.showString(buf, NUM_MODULES, false);
+				splitflap_task_.showString(buf, NUM_MODULES, false);
+			}
 
 			current_message_index_++;
 			last_message_change_time_ = millis();
 		}
+
+		String wifi_status;
+		switch (WiFi.status())
+		{
+		case WL_IDLE_STATUS:
+			wifi_status = "Idle";
+			break;
+		case WL_NO_SSID_AVAIL:
+			wifi_status = "No SSID";
+			break;
+		case WL_CONNECTED:
+			wifi_status = String(WIFI_SSID) + " " + WiFi.localIP().toString();
+			break;
+		case WL_CONNECT_FAILED:
+			wifi_status = "Connection failed";
+			break;
+		case WL_CONNECTION_LOST:
+			wifi_status = "Connection lost";
+			break;
+		case WL_DISCONNECTED:
+			wifi_status = "Disconnected";
+			break;
+		default:
+			wifi_status = "Unknown";
+			break;
+		}
+		display_task_.setMessage(1, String("Wifi: ") + wifi_status);
 
 		delay(1000);
 	}
