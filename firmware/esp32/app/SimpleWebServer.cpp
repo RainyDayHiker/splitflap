@@ -1,4 +1,4 @@
-#include "webserver_task.h"
+#include "SimpleWebServer.h"
 #include <Arduino.h>
 #include <LittleFS.h>
 
@@ -76,43 +76,43 @@ namespace mime
 	}
 }
 
-WebServerTask::WebServerTask(Logger &logger, const uint8_t task_core) : Task("WebServer", 4096, 1, task_core),
-																		logger_(logger),
-																		server(nullptr),
-																		running(false)
+SimpleWebServer::SimpleWebServer(Logger &logger, const uint8_t task_core) : Task("WebServer", 4096, 1, task_core),
+																			logger(logger),
+																			server(nullptr),
+																			running(false)
 {
 	server = new WebServer(SERVER_PORT);
 }
 
-WebServerTask::~WebServerTask()
+SimpleWebServer::~SimpleWebServer()
 {
 	Stop();
 }
 
-bool WebServerTask::Start(std::function<bool(String)> handleCaptivePortal)
+bool SimpleWebServer::Start(std::function<bool(String)> handleCaptivePortal)
 {
 	if (running)
 	{
-		logger_.log("WebServer: Already running");
+		logger.log("WebServer: Already running");
 		return true;
 	}
 
 	captivePortalHandler = handleCaptivePortal;
 
 	// Set up routes
-	server->onNotFound(std::bind(&WebServerTask::HandlePath, this));
+	server->onNotFound(std::bind(&SimpleWebServer::HandlePath, this));
 
 	// Start the server
 	server->begin();
 
-	logger_.logf("WebServer: Started on port %d", SERVER_PORT);
+	logger.logf("WebServer: Started on port %d", SERVER_PORT);
 
 	running = true;
 
 	return true;
 }
 
-void WebServerTask::Stop()
+void SimpleWebServer::Stop()
 {
 	if (!running)
 	{
@@ -129,27 +129,27 @@ void WebServerTask::Stop()
 		server = nullptr;
 	}
 
-	logger_.log("WebServer: Stopped");
+	logger.log("WebServer: Stopped");
 }
 
 // Helper method to set common headers
-void WebServerTask::setCommonHeaders()
+void SimpleWebServer::setCommonHeaders()
 {
 	server->sendHeader("Cache-Control", "no-cache, no-store, must-revalidate, max-age=0");
 	server->sendHeader("X-Content-Type-Options", "nosniff");
 }
 
-void WebServerTask::AddHandler(const Uri &uri, std::function<void()> handler)
+void SimpleWebServer::AddHandler(const Uri &uri, std::function<void()> handler)
 {
 	server->on(uri, handler);
 }
 
-void WebServerTask::AddHandler(const Uri &uri, HTTPMethod method, std::function<void()> handler)
+void SimpleWebServer::AddHandler(const Uri &uri, HTTPMethod method, std::function<void()> handler)
 {
 	server->on(uri, method, handler);
 }
 
-bool WebServerTask::GetRequestArg(const char *name, String &value)
+bool SimpleWebServer::GetRequestArg(const char *name, String &value)
 {
 	if (!server->hasArg(name))
 		return false;
@@ -157,9 +157,9 @@ bool WebServerTask::GetRequestArg(const char *name, String &value)
 	return true;
 }
 
-void WebServerTask::HandlePath()
+void SimpleWebServer::HandlePath()
 {
-	logger_.logf("HTTP request received for URI: %s", server->uri().c_str());
+	logger.logf("HTTP request received for URI: %s", server->uri().c_str());
 
 	// If the request is not for our server, then it was from the DNS capture so redirect to our IP and config page
 	if (captivePortalHandler(server->hostHeader()))
@@ -169,7 +169,7 @@ void WebServerTask::HandlePath()
 	RespondWithFileOr404(uri);
 }
 
-void WebServerTask::RespondWithFileOr404(String uri)
+void SimpleWebServer::RespondWithFileOr404(String uri)
 {
 	// Only for Get and Post
 	if (server->method() == HTTP_GET || server->method() == HTTP_POST)
@@ -185,7 +185,7 @@ void WebServerTask::RespondWithFileOr404(String uri)
 
 		if (LittleFS.exists(uri))
 		{
-			logger_.logf("File found, sending response: %s", uri.c_str());
+			logger.logf("File found, sending response: %s", uri.c_str());
 
 			setCommonHeaders();
 
@@ -194,26 +194,26 @@ void WebServerTask::RespondWithFileOr404(String uri)
 			file.close();
 			return;
 		}
-		logger_.logf("File not found: %s", uri.c_str());
+		logger.logf("File not found: %s", uri.c_str());
 	}
 
 	// File not found
 	RespondWith404();
 }
 
-void WebServerTask::RespondWith404()
+void SimpleWebServer::RespondWith404()
 {
 	setCommonHeaders();
 	server->send(404, "text/plain; charset=utf-8", "File Not Found");
 }
 
-void WebServerTask::RespondWithContent(int responseCode, String response)
+void SimpleWebServer::RespondWithContent(int responseCode, String response)
 {
 	setCommonHeaders();
 	server->send(responseCode, "text/plain; charset=utf-8", response);
 }
 
-void WebServerTask::Redirect(String uri)
+void SimpleWebServer::Redirect(String uri)
 {
 	setCommonHeaders();
 	server->sendHeader("Location", uri, true);
@@ -221,7 +221,7 @@ void WebServerTask::Redirect(String uri)
 	server->client().stop();							// Stop is needed because we sent no content length
 }
 
-void WebServerTask::run()
+void SimpleWebServer::run()
 {
 	while (running)
 	{

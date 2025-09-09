@@ -1,18 +1,17 @@
-#ifndef WEBSERVER_TASK_H
-#define WEBSERVER_TASK_H
+#pragma once
 
-#include <WiFi.h>
 #include <WebServer.h>
 #include "../core/logger.h"
 #include "../core/task.h"
+#include "Network.h"
 
-class WebServerTask : public Task<WebServerTask>
+class SimpleWebServer : public Task<SimpleWebServer>
 {
-	friend class Task<WebServerTask>; // Allow base Task to invoke protected run()
+	friend class Task<SimpleWebServer>; // Allow base Task to invoke protected run()
 
 public:
-	WebServerTask(Logger &logger, const uint8_t task_core);
-	~WebServerTask();
+	SimpleWebServer(Logger &logger, const uint8_t task_core = 0);
+	~SimpleWebServer();
 
 	// Initialize and start the webserver
 	bool Start(std::function<bool(String)> handleCaptivePortal);
@@ -38,11 +37,9 @@ private:
 
 	void HandlePath();
 
-	Logger &logger_;
+	Logger &logger;
 	WebServer *server;
 	bool running;
 	static const uint16_t SERVER_PORT = 80;
 	std::function<bool(String)> captivePortalHandler;
 };
-
-#endif // WEBSERVER_TASK_H

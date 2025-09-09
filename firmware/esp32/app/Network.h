@@ -23,7 +23,7 @@
 #include "../core/logger.h"
 #include "../core/task.h"
 #include "../splitflap/display_task.h"
-#include "webserver_task.h"
+#include "SimpleWebServer.h"
 
 enum class WiFiState
 {
@@ -34,12 +34,15 @@ enum class WiFiState
 	ERROR
 };
 
-class WiFiTask : public Task<WiFiTask>
+// Forward declare to make interconnected headers happy
+class SimpleWebServer;
+
+class Network : public Task<Network>
 {
-	friend class Task<WiFiTask>; // Allow base Task to invoke protected run()
+	friend class Task<Network>; // Allow base Task to invoke protected run()
 
 public:
-	WiFiTask(DisplayTask &display_task, WebServerTask &web_server_task, Logger &logger, const uint8_t task_core);
+	Network(DisplayTask &display_task, SimpleWebServer &webServer, Logger &logger, const uint8_t task_core = 0);
 
 	bool HandleCaptivePortal(String serverHostname);
 
@@ -63,14 +66,14 @@ private:
 
 	void updateDisplayStatus();
 
-	DisplayTask &display_task_;
-	WebServerTask &web_server_task_;
-	Logger &logger_;
+	DisplayTask &displayTask;
+	SimpleWebServer &webServer;
+	Logger &logger;
 
-	bool _inConfigMode;
-	bool _attemptingNewSSID;
-	String _hostNameFQDN;
-	String _apHostName;
+	bool inConfigMode;
+	bool attemptingNewSSID;
+	String hostNameFQDN;
+	String apHostName;
 
-	String last_status_ssid;
+	String lastStatusSSID;
 };

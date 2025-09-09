@@ -1,7 +1,7 @@
 #pragma once
-#include "clock_task.h"
-#include "webserver_task.h"
-#include "wifi_task.h"
+#include "Clock.h"
+#include "SimpleWebServer.h"
+#include "Network.h"
 
 class App
 {
@@ -12,6 +12,6 @@ public:
 
 private:
 	Clock clockTask;
-	WebServerTask webServerTask;
-	WiFiTask wifiTask;
+	SimpleWebServer simpleWebServer;
+	Network network;
 };

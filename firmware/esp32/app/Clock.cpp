@@ -13,20 +13,19 @@
    See the License for the specific language governing permissions and
    limitations under the License.
 */
-#include "clock_task.h"
+#include "Clock.h"
 
 #include "LocalTime.h"
 
-Clock::Clock(SplitflapTask &splitflap_task, Logger &logger, const uint8_t task_core) : Task("Clock", 8192, 1, task_core),
-																					   splitflap_task_(splitflap_task),
-																					   logger_(logger)
+Clock::Clock(SplitflapTask &splitflapTask, Logger &logger, const uint8_t task_core) : Task("Clock", 8192, 1, task_core),
+																					   splitFlap(splitflapTask),
+																					   logger(logger)
 {
 }
 
 void Clock::run()
 {
 	char buf[max(NUM_MODULES + 1, 200)];
-	char character_list[] = " ABCDEFGHIJKLMNOPQRSTUVWXYZa0123456789b.?-$'#,!&cdef";
 
 	while (1)
 	{
@@ -41,17 +40,17 @@ void Clock::run()
 			{
 				char temp[6];
 				strftime(temp, sizeof(temp), "%H:%M", &timeinfo);
-				if (!current_time_.equals(temp))
+				if (!currentTime.equals(temp))
 				{
-					current_time_ = temp;
+					currentTime = temp;
 
 					// Update flaps - for now, we're going to go with time + an emoji for the day of week for testing
 					char emoji = 'a' + timeinfo.tm_wday;
 					if (emoji == 'g')
 						emoji = '!';
 					snprintf(buf, sizeof(buf), "%s%c", temp, emoji);
-					logger_.logf("Clock: updating time to %s", buf);
-					splitflap_task_.showString(buf, NUM_MODULES, false);
+					logger.logf("Clock: updating time to %s", buf);
+					splitFlap.showString(buf, NUM_MODULES, false);
 					delay(55 * 1000);
 				}
 				else

@@ -26,14 +26,14 @@ class Clock : public Task<Clock>
 	friend class Task<Clock>; // Allow base Task to invoke protected run()
 
 public:
-	Clock(SplitflapTask &splitflap_task, Logger &logger, const uint8_t task_core);
+	Clock(SplitflapTask &splitflapTask, Logger &logger, const uint8_t task_core = 0);
 
 protected:
 	void run();
 
 private:
-	SplitflapTask &splitflap_task_;
-	Logger &logger_;
+	SplitflapTask &splitFlap;
+	Logger &logger;
 
-	String current_time_ = "";
+	String currentTime = "";
 };
