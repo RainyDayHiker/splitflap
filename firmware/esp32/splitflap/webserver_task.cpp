@@ -68,12 +68,9 @@ namespace mime
 	String getContentType(const String &path)
 	{
 		for (size_t i = 0; i < maxType; i++)
-		{
 			if (path.endsWith(FPSTR(mimeTable[i].endsWith)))
-			{
 				return String(FPSTR(mimeTable[i].mimeType));
-			}
-		}
+
 		// Fall-through and just return default type
 		return String(FPSTR(mimeTable[none].mimeType));
 	}
@@ -108,12 +105,7 @@ bool WebServerTask::Start(std::function<bool(String)> handleCaptivePortal)
 	// Start the server
 	server->begin();
 
-	char msg[100];
-	snprintf(msg, sizeof(msg), "WebServer: Started on port %d", SERVER_PORT);
-	logger_.log(msg);
-
-	snprintf(msg, sizeof(msg), "WebServer: Access at http://%s/", WiFi.localIP().toString().c_str());
-	logger_.log(msg);
+	logger_.logf("WebServer: Started on port %d", SERVER_PORT);
 
 	running = true;
 
@@ -167,9 +159,7 @@ bool WebServerTask::GetRequestArg(const char *name, String &value)
 
 void WebServerTask::HandlePath()
 {
-	char buf[200];
-	snprintf(buf, sizeof(buf), "HTTP request received for URI: %s", server->uri().c_str());
-	logger_.log(buf);
+	logger_.logf("HTTP request received for URI: %s", server->uri().c_str());
 
 	// If the request is not for our server, then it was from the DNS capture so redirect to our IP and config page
 	if (captivePortalHandler(server->hostHeader()))
@@ -193,13 +183,9 @@ void WebServerTask::RespondWithFileOr404(String uri)
 		if (contentType.startsWith("text/"))
 			contentType += "; charset=utf-8";
 
-		char buf[200];
-		snprintf(buf, sizeof(buf), "Looking for file: %s", uri.c_str());
-		logger_.log(buf);
-
 		if (LittleFS.exists(uri))
 		{
-			logger_.log("File found, sending response");
+			logger_.logf("File found, sending response: %s", uri.c_str());
 
 			setCommonHeaders();
 
@@ -208,7 +194,7 @@ void WebServerTask::RespondWithFileOr404(String uri)
 			file.close();
 			return;
 		}
-		logger_.log("File not found");
+		logger_.logf("File not found: %s", uri.c_str());
 	}
 
 	// File not found
@@ -240,9 +226,8 @@ void WebServerTask::run()
 	while (running)
 	{
 		if (server != nullptr)
-		{
 			server->handleClient();
-		}
+
 		vTaskDelay(pdMS_TO_TICKS(10)); // Small delay to prevent watchdog issues
 	}
 }

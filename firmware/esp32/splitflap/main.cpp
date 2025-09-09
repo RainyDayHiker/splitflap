@@ -61,8 +61,6 @@ void setup()
 {
 	serialTask.begin();
 
-	serialTask.log("Start");
-
 	if (!LittleFS.begin(false /*FORMAT_LITTLEFS_IF_FAILED*/))
 	{
 		serialTask.log("LittleFS Mount Failed");
@@ -81,9 +79,7 @@ void setup()
 	{
 		PB_PersistentConfiguration saved = config.get();
 		for (uint8_t i = 0; i < min(saved.module_offset_steps_count, (pb_size_t)NUM_MODULES); i++)
-		{
 			offsets[i] = saved.module_offset_steps[i];
-		}
 	}
 	else if (NUM_MODULES >= 6)
 	{
