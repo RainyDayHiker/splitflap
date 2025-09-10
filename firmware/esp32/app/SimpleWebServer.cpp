@@ -135,7 +135,7 @@ void SimpleWebServer::Stop()
 // Helper method to set common headers
 void SimpleWebServer::setCommonHeaders()
 {
-	server->sendHeader("Cache-Control", "no-cache, no-store, must-revalidate, max-age=0");
+	server->sendHeader("Cache-Control", "no-cache, max-age=0");
 	server->sendHeader("X-Content-Type-Options", "nosniff");
 }
 
