@@ -34,8 +34,8 @@ protected:
 
 private:
 	void setCommonHeaders(); // Helper method to set security headers
-
 	void HandlePath();
+	void computeETagAndOpenFile(const String &uri, char *etagBuffer, size_t etagBufferLen);
 
 	Logger &logger;
 	WebServer *server;

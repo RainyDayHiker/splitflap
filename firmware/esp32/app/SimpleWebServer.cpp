@@ -2,6 +2,8 @@
 #include <Arduino.h>
 #include <LittleFS.h>
 
+#include <FS.h>
+
 namespace mime
 {
 	enum type
@@ -44,7 +46,7 @@ namespace mime
 		{".htm", "text/html"},
 		{".txt", "text/plain"},
 		{".css", "text/css"},
-		{".js", "application/javascript"},
+		{".js", "text/javascript"},
 		{".json", "application/json"},
 		{".png", "image/png"},
 		{".gif", "image/gif"},
@@ -135,7 +137,7 @@ void SimpleWebServer::Stop()
 // Helper method to set common headers
 void SimpleWebServer::setCommonHeaders()
 {
-	server->sendHeader("Cache-Control", "no-cache, max-age=0");
+	server->sendHeader("Cache-Control", "no-cache");
 	server->sendHeader("X-Content-Type-Options", "nosniff");
 }
 
@@ -180,19 +182,36 @@ void SimpleWebServer::RespondWithFileOr404(String uri)
 
 		String contentType = mime::getContentType(uri);
 		// Add charset=utf-8 for text content types
-		if (contentType.startsWith("text/"))
+		if (contentType.startsWith("text/") || contentType == "application/json")
 			contentType += "; charset=utf-8";
 
 		if (LittleFS.exists(uri))
 		{
 			// logger.logf("File found, sending response: %s", uri.c_str());
 
-			setCommonHeaders();
+			char etag[32];
+			computeETagAndOpenFile(uri, etag, sizeof(etag));
 
+			server->sendHeader("Cache-Control", "public, max-age=31536000, immutable");
+			server->sendHeader("ETag", etag);
+			server->sendHeader("X-Content-Type-Options", "nosniff");
+
+			// If If-None-Match matches our ETag, return 304
+			String inm = server->header("If-None-Match");
+			if (inm.equals(etag))
+			{
+				server->send(304, contentType, "");
+				return;
+			}
+
+			// Normal 200 response with long cache lifetime
 			File file = LittleFS.open(uri, "r");
-			server->streamFile(file, contentType);
-			file.close();
-			return;
+			if (file)
+			{
+				server->streamFile(file, contentType);
+				file.close();
+				return;
+			}
 		}
 		logger.logf("File not found: %s", uri.c_str());
 	}
@@ -230,4 +249,37 @@ void SimpleWebServer::run()
 
 		vTaskDelay(pdMS_TO_TICKS(10)); // Small delay to prevent watchdog issues
 	}
+}
+
+void SimpleWebServer::computeETagAndOpenFile(const String &uri, char *etagBuffer, size_t etagBufferLen)
+{
+	File file = LittleFS.open(uri, "r");
+	if (!file)
+		return;
+
+	uint32_t hash = 2166136261u; // FNV-1a 32-bit
+	uint32_t size = file.size();
+	uint8_t buf[64];
+	int toRead = size < (int)sizeof(buf) ? size : (int)sizeof(buf);
+	if (toRead > 0)
+	{
+		int n = file.read(buf, toRead);
+		for (int i = 0; i < n; i++)
+		{
+			hash ^= buf[i];
+			hash *= 16777619u;
+		}
+	}
+	if (size > (int)sizeof(buf))
+	{
+		file.seek(size - sizeof(buf), SeekSet);
+		int n = file.read(buf, sizeof(buf));
+		for (int i = 0; i < n; i++)
+		{
+			hash ^= buf[i];
+			hash *= 16777619u;
+		}
+	}
+	snprintf(etagBuffer, etagBufferLen, "W/\"%08lx-%lx\"", (unsigned long)size, (unsigned long)hash);
+	file.close();
 }
