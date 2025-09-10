@@ -5,7 +5,7 @@
    you may not use this file except in compliance with the License.
    You may obtain a copy of the License at
 
-       http://www.apache.org/licenses/LICENSE-2.0
+	   http://www.apache.org/licenses/LICENSE-2.0
 
    Unless required by applicable law or agreed to in writing, software
    distributed under the License is distributed on an "AS IS" BASIS,
@@ -24,29 +24,35 @@
 #include "serial_legacy_json_protocol.h"
 #include "serial_proto_protocol.h"
 
-class SerialTask : public Task<SerialTask>, public Logger {
-    friend class Task<SerialTask>; // Allow base Task to invoke protected run()
+class Log;
 
-    public:
-        SerialTask(SplitflapTask& splitflap_task, const uint8_t task_core);
-        virtual ~SerialTask() {};
-        
-        void log(const char* msg) override;
+class SerialTask : public Task<SerialTask>, public Logger
+{
+	friend class Task<SerialTask>; // Allow base Task to invoke protected run()
 
-        void sendSupervisorState(PB_SupervisorState& supervisor_state);
+public:
+	SerialTask(SplitflapTask &splitflap_task, const uint8_t task_core);
+	virtual ~SerialTask() {};
 
-    protected:
-        void run();
+	void log(const char *msg) override;
+	void setLogInterface(Log *logInterface);
 
-    private:
-        SplitflapTask& splitflap_task_;
-        UartStream stream_;
+	void sendSupervisorState(PB_SupervisorState &supervisor_state);
 
-        SerialLegacyJsonProtocol legacy_protocol_;
-        SerialProtoProtocol proto_protocol_;
+protected:
+	void run();
 
-        QueueHandle_t log_queue_;
-        QueueHandle_t supervisor_state_queue_;
+private:
+	SplitflapTask &splitflap_task_;
+	UartStream stream_;
 
-        void dumpStatus(SplitflapState& state);
+	SerialLegacyJsonProtocol legacy_protocol_;
+	SerialProtoProtocol proto_protocol_;
+
+	QueueHandle_t log_queue_;
+	QueueHandle_t supervisor_state_queue_;
+
+	Log *logInterface_ = nullptr;
+
+	void dumpStatus(SplitflapState &state);
 };

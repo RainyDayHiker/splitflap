@@ -159,7 +159,7 @@ bool SimpleWebServer::GetRequestArg(const char *name, String &value)
 
 void SimpleWebServer::HandlePath()
 {
-	logger.logf("HTTP request received for URI: %s", server->uri().c_str());
+	//	logger.logf("HTTP request received for URI: %s", server->uri().c_str());
 
 	// If the request is not for our server, then it was from the DNS capture so redirect to our IP and config page
 	if (captivePortalHandler(server->hostHeader()))
@@ -185,7 +185,7 @@ void SimpleWebServer::RespondWithFileOr404(String uri)
 
 		if (LittleFS.exists(uri))
 		{
-			logger.logf("File found, sending response: %s", uri.c_str());
+			// logger.logf("File found, sending response: %s", uri.c_str());
 
 			setCommonHeaders();
 

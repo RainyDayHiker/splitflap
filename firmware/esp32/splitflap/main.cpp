@@ -48,8 +48,8 @@ MQTTTask mqttTask(splitflapTask, displayTask, serialTask, 0);
 #endif
 
 #if HTTP
-// #include "http_task.h"
-// HTTPTask httpTask(splitflapTask, displayTask, wifiTask, serialTask, 0);
+#include "http_task.h"
+HTTPTask httpTask(splitflapTask, displayTask, wifiTask, serialTask, 0);
 #endif
 
 App app(splitflapTask, displayTask, serialTask);
@@ -57,6 +57,7 @@ App app(splitflapTask, displayTask, serialTask);
 void setup()
 {
 	serialTask.begin();
+	serialTask.setLogInterface(&app);
 
 	if (!LittleFS.begin(false /*FORMAT_LITTLEFS_IF_FAILED*/))
 	{
