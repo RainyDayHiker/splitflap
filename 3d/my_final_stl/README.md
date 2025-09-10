@@ -19,6 +19,9 @@ Print settings:
 	- Print flaps alternating tops so that each letter is either a top or satin finish and not mixed
 	- Increased purge for white filament to make sure it is white after printing black
 	- I used PLA since I found a good PLA white and black to give good contrast
+- Rubber Feet:
+	- TPU
+	- .10mm layer (although I suspect .20mm layers are fine)
 - Everything else:
 	- .20mm SPEED or STRUCTURAL
 	- Set "Bridging Angle" to 45 for Frame prints (not required but improves the wire channels since they have overhangs and I kept finding my slicer wanted to do long runs for at least one of them)
@@ -26,7 +29,7 @@ Print settings:
 	- Orientation of parts should be correct
 	- Whatever build plate gives the surface you want on the Side and Top panels
 	- NOTE: Spool halves are very thin - if you find them challenging to print on your printer, the spools from the original design should be identical in dimensions and usable instead
-	- Rubber Foot in TPU
+	- NOTE: The Chainlink mounts are thin - most printed fine but I found a few times that I needed to add a brim to make things stay in place
 
 Part list:
 - Prints:
