@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="utf-8">
+	<title>SplitFlap Config</title>
+	<meta name="description"
+		  content="">
+	<meta name="viewport"
+		  content="width=device-width, initial-scale=1">
+	<link rel="stylesheet"
+		  href="config.css">
+	<script src="config.js"></script>
+</head>
+
+<body>
+	<h1>SplitFlap Config</h1>
+	<table>
+		<tr>
+			<td class="textColumn"> Time Zone: </td>
+			<td>
+				<select name="timezones"
+						class="common_width"
+						id="timezones"
+						title="Time Zone picker"
+						onchange="timezoneOnChange(this)">
+					<option value="0">Universal (UTC)</option>
+					<option value="1">New York (EST/EDT)</option>
+					<option value="2">Chicago (CST/CDT)</option>
+					<option value="3">Denver (MST/MDT)</option>
+					<option value="4">Los Angeles (PST/PDT)</option>
+				</select>
+			</td>
+		</tr>
+
+		<tr>
+			<td class="textColumn"> Quiet Time Start: </td>
+			<td>
+				<input type="time"
+					   title="Quiet Time Start picker"
+					   id="quietTimeStart"
+					   class="time-picker common_width"
+					   onchange="quietTimeStartPickerChanged(this)">
+				<span class="note">(24-hour format)</span>
+			</td>
+		</tr>
+
+		<tr>
+			<td class="textColumn"> Quiet Time End: </td>
+			<td>
+				<input type="time"
+					   title="Quiet Time End picker"
+					   id="quietTimeEnd"
+					   class="time-picker common_width"
+					   onchange="quietTimeEndPickerChanged(this)">
+				<span class="note">(24-hour format)</span>
+			</td>
+		</tr>
+
+	</table>
+
+	<br />
+	<a href="/network/config.html">WiFi Configuration</a>
+
+	<br />
+	<a href="/index.html">Status Page</a>
+</body>
+
+</html>

@@ -84,7 +84,7 @@ bool LocalTime::HasTimeSyncHappened()
 	time_t now = time(nullptr);
 
 	// difftime returns diff in seconds - compare to a year.  If the device is running that long without getting a real time, chaos is fine.
-	return (difftime(now, INITIAL_TIME) < (60 * 60 * 24 * 365));
+	return !(difftime(now, INITIAL_TIME) < (60 * 60 * 24 * 365));
 }
 
 char *LocalTime::DateTimeString(char *buffer, size_t size, time_t time)

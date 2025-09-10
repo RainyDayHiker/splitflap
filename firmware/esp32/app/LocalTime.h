@@ -24,5 +24,17 @@ public:
 
 	static char *DateTimeString(char *buffer, size_t size, time_t time);
 
+	static int CompareTime(const struct tm *time, const int hour, const int minute)
+	{
+		if (time->tm_hour < hour)
+			return -1;
+		else if (time->tm_hour > hour)
+			return 1;
+		else if (time->tm_min < minute)
+			return -1;
+		else if (time->tm_min > minute)
+			return 1;
+		return 0;
+	}
 private:
 };

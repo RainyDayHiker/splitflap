@@ -16,6 +16,7 @@
 #include "Clock.h"
 
 #include "LocalTime.h"
+#include "Config.h"
 
 Clock::Clock(SplitflapTask &splitflapTask, Logger &logger, const uint8_t task_core) : Task("Clock", 8192, 1, task_core),
 																					  splitFlap(splitflapTask),
@@ -29,47 +30,52 @@ void Clock::run()
 
 	while (1)
 	{
-		// Check to see if we have a good time sync
-		if (!LocalTime::HasTimeSyncHappened())
+		// Check to see if we have a good time sync and a good config
+		if (!LocalTime::HasTimeSyncHappened() || Config::GetInstance() == nullptr)
 		{
-			struct tm timeinfo;
-			LocalTime::GetCurrentTime(&timeinfo);
-
-			// No updates at night
-			if (timeinfo.tm_hour > 7 && timeinfo.tm_hour < 22)
-			{
-				char temp[6];
-				strftime(temp, sizeof(temp), "%H:%M", &timeinfo);
-				if (!currentTime.equals(temp))
-				{
-					currentTime = temp;
-
-					// Update flaps - for now, we're going to go with time + an emoji for the day of week for testing
-					char emoji = 'a' + timeinfo.tm_wday;
-					if (emoji == 'g')
-						emoji = '!';
-					snprintf(buf, sizeof(buf), "%s%c", temp, emoji);
-					logger.logf("Clock: updating time to %s", buf);
-					splitFlap.showString(buf, NUM_MODULES, false);
-					delay(55 * 1000);
-				}
-				else
-					delay(500);
-			}
-			else
-			{
-				if (!currentTime.equals(""))
-				{
-					currentTime = "";
-					logger.log("Clock: Nighttime, clearing display");
-					for (int i = 0; i < NUM_MODULES; i++)
-						buf[i] = ' ';
-					splitFlap.showString(buf, NUM_MODULES, false);
-				}
-				delay(60 * 1000);
-			}
-		}
-		else
 			delay(1000);
+			continue;
+		}
+
+		struct tm timeinfo;
+		LocalTime::GetCurrentTime(&timeinfo);
+
+		// No updates at night - ensure current time is not within the Quiet Time config checking against the hour and minute
+		if (LocalTime::CompareTime(&timeinfo, Config::GetInstance()->GetQuietTimeStartHour(), Config::GetInstance()->GetQuietTimeStartMinute()) >= 0 &&
+			LocalTime::CompareTime(&timeinfo, Config::GetInstance()->GetQuietTimeEndHour(), Config::GetInstance()->GetQuietTimeEndMinute()) < 0)
+		{
+			if (!currentTime.equals(""))
+			{
+				currentTime = "";
+				logger.log("Clock: Nighttime, clearing display");
+				for (int i = 0; i < NUM_MODULES; i++)
+					buf[i] = ' ';
+				splitFlap.showString(buf, NUM_MODULES, false);
+			}
+			delay(60 * 1000);
+			continue;
+		}
+
+		// Calc the time that should be shown
+		char temp[6];
+		strftime(temp, sizeof(temp), "%H:%M", &timeinfo);
+
+		if (currentTime.equals(temp))
+		{
+			// No change in time, do nothing
+			delay(500);
+			continue;
+		}
+
+		currentTime = temp;
+
+		// Update flaps - for now, we're going to go with time + an emoji for the day of week for testing
+		char emoji = 'a' + timeinfo.tm_wday;
+		if (emoji == 'g')
+			emoji = '!';
+		snprintf(buf, sizeof(buf), "%s%c", temp, emoji);
+		logger.logf("Clock: updating time to %s", buf);
+		splitFlap.showString(buf, NUM_MODULES, false);
+		delay(55 * 1000);
 	}
 }

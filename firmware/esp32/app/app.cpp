@@ -3,15 +3,16 @@
 
 App::App(SplitflapTask &splitflapTask, DisplayTask &displayTask, Logger &logger) : clockTask(splitflapTask, logger),
 																				   simpleWebServer(logger),
-																				   network(displayTask, simpleWebServer, logger)
+																				   network(displayTask, simpleWebServer, logger),
+																				   config(simpleWebServer, logger)
 {
 }
 
 void App::begin()
 {
-	// Init Time
-	LocalTime::setupTime(LocalTime::TimeZone::LosAngeles);
-	// TODO: Setup config to store this
+	config.Setup();
+
+	LocalTime::setupTime(config.GetTimeZone());
 
 	network.Setup();
 
@@ -21,4 +22,6 @@ void App::begin()
 	network.begin();
 
 	clockTask.begin();
+
+	config.begin();
 }

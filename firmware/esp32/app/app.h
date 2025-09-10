@@ -2,6 +2,7 @@
 #include "Clock.h"
 #include "SimpleWebServer.h"
 #include "Network.h"
+#include "Config.h"
 
 class App
 {
@@ -14,4 +15,5 @@ private:
 	Clock clockTask;
 	SimpleWebServer simpleWebServer;
 	Network network;
+	Config config;
 };
