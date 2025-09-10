@@ -37,12 +37,17 @@ void Clock::run()
 			continue;
 		}
 
+		if (!Config::GetInstance()->GetAutoStatusUpdatesEnabled())
+		{
+			delay(5000);
+			continue;
+		}
+
 		struct tm timeinfo;
 		LocalTime::GetCurrentTime(&timeinfo);
 
 		// No updates at night - ensure current time is not within the Quiet Time config checking against the hour and minute
-		if (LocalTime::CompareTime(&timeinfo, Config::GetInstance()->GetQuietTimeStartHour(), Config::GetInstance()->GetQuietTimeStartMinute()) >= 0 &&
-			LocalTime::CompareTime(&timeinfo, Config::GetInstance()->GetQuietTimeEndHour(), Config::GetInstance()->GetQuietTimeEndMinute()) < 0)
+		if (Config::GetInstance()->IsTimeInQuietPeriod(&timeinfo))
 		{
 			if (!currentTime.equals(""))
 			{

@@ -21,6 +21,7 @@ Config::Config(SimpleWebServer &webServer, Logger &logger) : Task("Config", 8192
 	_quietTimeStartMinute = 0;
 	_quietTimeEndHour = 7;
 	_quietTimeEndMinute = 0;
+	_autoStatusUpdatesEnabled = true;
 }
 
 void Config::Setup()
@@ -43,14 +44,9 @@ void Config::run()
 void Config::HandleSetProperties()
 {
 	if (ProcessSetProperties())
-	{
-		_dirty = true;
 		webServer.RespondWithContent(200, "");
-	}
 	else
-	{
 		webServer.RespondWithContent(400, "No properties to set");
-	}
 }
 
 void Config::EnsureReady()
@@ -133,6 +129,14 @@ bool Config::ProcessSetProperties()
 		processedSomething |= SetQuietTimeEnd(quietTimeEndHour.toInt(), quietTimeEndMinute.toInt());
 	}
 
+	// Handle auto status updates toggle (expecting "autoStatusUpdates=0" or "1")
+	String autoStatusUpdates;
+	if (webServer.GetRequestArg("autoStatusUpdates", autoStatusUpdates))
+	{
+		int val = autoStatusUpdates.toInt();
+		processedSomething |= SetAutoStatusUpdatesEnabled(val != 0);
+	}
+
 	return processedSomething;
 }
 
@@ -149,6 +153,10 @@ void Config::Load(JsonDocument *doc)
 	// Load quiet time end time
 	if (docRef["QuietTimeEndHour"].is<int>() && docRef["QuietTimeEndMinute"].is<int>())
 		SetQuietTimeEnd(docRef["QuietTimeEndHour"], docRef["QuietTimeEndMinute"]);
+
+	// Load auto status updates
+	if (docRef["AutoStatusUpdates"].is<bool>())
+		SetAutoStatusUpdatesEnabled((bool)docRef["AutoStatusUpdates"]);
 }
 
 void Config::Save(JsonDocument *doc)
@@ -163,6 +171,9 @@ void Config::Save(JsonDocument *doc)
 	// Save quiet time end time
 	docRef["QuietTimeEndHour"] = _quietTimeEndHour;
 	docRef["QuietTimeEndMinute"] = _quietTimeEndMinute;
+
+	// Save auto status updates setting
+	docRef["AutoStatusUpdates"] = _autoStatusUpdatesEnabled;
 }
 
 bool Config::SetTimeZone(LocalTime::TimeZone tzNew)
@@ -239,8 +250,44 @@ bool Config::SetQuietTimeEnd(int hour, int minute)
 	return true;
 }
 
+bool Config::IsTimeInQuietPeriod(const tm *time)
+{
+	if (!time)
+		return false;
+
+	int startMinutes = _quietTimeStartHour * 60 + _quietTimeStartMinute;
+	int endMinutes = _quietTimeEndHour * 60 + _quietTimeEndMinute;
+	int currentMinutes = time->tm_hour * 60 + time->tm_min;
+
+	// If start and end are identical, treat as no quiet period.
+	if (startMinutes == endMinutes)
+		return false;
+
+	if (startMinutes < endMinutes)
+	{
+		// Quiet period does not cross midnight: [start, end)
+		return currentMinutes >= startMinutes && currentMinutes < endMinutes;
+	}
+	else
+	{
+		// Quiet period crosses midnight: from start -> 24:00 and 00:00 -> end
+		return (currentMinutes >= startMinutes) || (currentMinutes < endMinutes);
+	}
+}
+
 bool Config::IsValidTime(int hour, int minute)
 {
 	// Check for valid hour (0-23) and minute (0-59)
 	return (hour >= 0 && hour <= 23 && minute >= 0 && minute <= 59);
+}
+
+bool Config::SetAutoStatusUpdatesEnabled(bool enabled)
+{
+	if (_autoStatusUpdatesEnabled == enabled)
+		return false;
+	if (fVerboseLog)
+		logger.logf("Config: Setting auto status updates to %s", enabled ? "enabled" : "disabled");
+	_autoStatusUpdatesEnabled = enabled;
+	_dirty = true;
+	return true;
 }

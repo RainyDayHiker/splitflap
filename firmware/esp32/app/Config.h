@@ -44,6 +44,7 @@ private:
 	int _quietTimeStartMinute;
 	int _quietTimeEndHour;
 	int _quietTimeEndMinute;
+	bool _autoStatusUpdatesEnabled;
 
 public:
 	LocalTime::TimeZone GetTimeZone() { return _tz; }
@@ -57,4 +58,10 @@ public:
 	int GetQuietTimeEndHour() { return _quietTimeEndHour; }
 	int GetQuietTimeEndMinute() { return _quietTimeEndMinute; }
 	bool SetQuietTimeEnd(int hour, int minute);
+
+	bool IsTimeInQuietPeriod(const struct tm *time);
+
+	// Auto status updates
+	bool GetAutoStatusUpdatesEnabled() const { return _autoStatusUpdatesEnabled; }
+	bool SetAutoStatusUpdatesEnabled(bool enabled);
 };

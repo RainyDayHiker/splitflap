@@ -24,6 +24,11 @@ async function getStatus() {
 			const minute = padZero(config.QuietTimeEndMinute);
 			document.getElementById('quietTimeEnd').value = `${hour}:${minute}`;
 		}
+
+		// Set auto status updates checkbox
+		if ('AutoStatusUpdates' in config) {
+			document.getElementById('autoStatusUpdates').checked = !!config.AutoStatusUpdates;
+		}
 	} catch (e) {
 		// Optionally handle error
 	}
@@ -88,4 +93,9 @@ function isValidTime(hour, minute) {
 	if (minute < 0 || minute > 59) return false;
 
 	return true;
+}
+
+function autoStatusUpdatesChanged(element) {
+	const enabled = element.checked ? 1 : 0;
+	sendPropertyChange("autoStatusUpdates=" + enabled);
 }
