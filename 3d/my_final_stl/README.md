@@ -66,7 +66,7 @@ Part list:
 		- M3 hex nut (x5)
 		- NOTE: Reduce this count by the amount of hardware for the right and left panels
 	- For each Flap unit that is connected vertically to a flap below it:
-		- M3x10 button head (x2) -- TODO: check!
+		- M3x12 button head (x2) (change 1 to an M3x16 if this unit has a Chainlink Mount)
 		- M3 hex nut (x6)
 	- For each Panel - Right:
 		- M3 black hex nut (x4)
@@ -77,19 +77,19 @@ Part list:
 		- M3x6 black (x1) (for sensor) (Note that this is tight but works - an M3x8 would be fine as well)
 		- M3 black hex nut (x1) (for sensor)
 	- For each Panel - Top (of any type):
-		- M3x8 black (x6) -- TODO: check!
+		- M3x8 black (x6) -- TODO: CHECK!
 		- M3 hex nut (x6)
 	- For each Panel - Back (of any type):
 		- M3x16 button head (x3)
 		- M3 hex nut (x3)
 	- For each Chainlink Buddy Mount:
 		- M3x8 button head (x4) (Board to Mount)
-		- M3x10 button head (x1) (Mount to Frame) CHECK!!
-		- M3 hex nut (x5)
+		- M3x10 button head (x1) (Mount to Frame) -- TODO: CHECK! - M3x16 for upper rows
+		- M3 hex nut (x5) - minus one for upper rows
 	- For each Chainlink Driver Mount set:
 		- M3x8 button head (x4) (Board to Mounts)
-		- M3x8 button head (x2) (Mount to Frame)
-		- M3 hex nut (x6)
+		- M3x8 button head (x2) (Mount to Frame) -- TODO: CHECK! - M3x16 for upper rows
+		- M3 hex nut (x6) - minus two for upper rows
 	- For each rubber foot:
  		- M3x8 button head (x1)
 		- M3 hex nut (x1)
@@ -158,8 +158,8 @@ Assembly instructions:
 
 	- Additional rows are the same steps as the first row except:
 		- Skip installing the bottom panel
-		- Attach the upper frame to the lower frame with 2 M3x10 (TODO CHECK!) bolts
-			- For any upper unit that will have a Chainlink mount installed, easiest to do it now and use an M3x12 bolt instead although it can be done at the end as well
+		- Attach the upper frame to the lower frame with 2 M3x12 bolts
+			- For any upper unit that will have a Chainlink mount installed, easiest to do it now and use an M3x16 bolt instead although it can be done at the end as well
 	
 	- Finally:
 		1. Install any moounts and feet not yet installed
