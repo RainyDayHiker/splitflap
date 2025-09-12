@@ -123,7 +123,7 @@ bool Configuration::saveToDisk()
 		return false;
 	}
 
-	File f = LittleFS.open(CONFIG_PATH, FILE_WRITE);
+	File f = LittleFS.open(CONFIG_PATH, FILE_WRITE, true);
 	if (!f)
 	{
 		log("Failed to open config file");

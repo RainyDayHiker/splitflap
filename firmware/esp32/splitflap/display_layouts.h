@@ -5,7 +5,7 @@
    you may not use this file except in compliance with the License.
    You may obtain a copy of the License at
 
-       http://www.apache.org/licenses/LICENSE-2.0
+	   http://www.apache.org/licenses/LICENSE-2.0
 
    Unless required by applicable law or agreed to in writing, software
    distributed under the License is distributed on an "AS IS" BASIS,
@@ -18,21 +18,23 @@
 #include <stdint.h>
 
 // Customize these settings and select a layout algorithm at the bottom if you have a different arrangement of modules:
-#define DISPLAY_COLUMNS (NUM_MODULES)
-
+#ifndef DISPLAY_COLUMNS
+#define DISPLAY_COLUMNS (NUM_MODULES) // Default to a single row if not defined (should be set in platformio.ini)
+#endif
 
 // EXAMPLE LAYOUT ALGORITHMS:
-static void getLayoutPositionSingleRowZigZag(const uint8_t module_index, uint8_t* out_row, uint8_t* out_col) {
-    *out_row = module_index / DISPLAY_COLUMNS;
+static void getLayoutPositionSingleRowZigZag(const uint8_t module_index, uint8_t *out_row, uint8_t *out_col)
+{
+	*out_row = module_index / DISPLAY_COLUMNS;
 
-    // Each row alternates left-to-right, then right-to-left so data can be easily chained,
-    // winding back and forth down the rows.
-    *out_col = (*out_row % 2) ?
-        (DISPLAY_COLUMNS - 1 - (module_index % DISPLAY_COLUMNS))
-        : module_index % DISPLAY_COLUMNS;
+	// Each row alternates left-to-right, then right-to-left so data can be easily chained,
+	// winding back and forth down the rows.
+	*out_col = (*out_row % 2) ? (DISPLAY_COLUMNS - 1 - (module_index % DISPLAY_COLUMNS))
+							  : module_index % DISPLAY_COLUMNS;
 
+	// My layout is bottom up, not top down, so flip the row:
+	*out_row = (NUM_MODULES + DISPLAY_COLUMNS - 1) / DISPLAY_COLUMNS - *out_row - 1;
 }
-
 
 /**
  * Each Driver connects to 3 columns across 2 rows, and then zig zags back on the next set of 2 rows
@@ -68,11 +70,10 @@ static void getLayoutPositionSingleRowZigZag(const uint8_t module_index, uint8_t
 //         : ((module_index / 2) % DISPLAY_COLUMNS);
 // }
 
+static void getLayoutPosition(const uint8_t module_index, uint8_t *out_row, uint8_t *out_col)
+{
+	// Select a layout algorithm by uncommenting, or implement your own here:
 
-
-static void getLayoutPosition(const uint8_t module_index, uint8_t* out_row, uint8_t* out_col) {
-    // Select a layout algorithm by uncommenting, or implement your own here:
-
-    // getLayoutPositionDualRowZigZag(true, module_index, out_row, out_col);
-    getLayoutPositionSingleRowZigZag(module_index, out_row, out_col);
+	// getLayoutPositionDualRowZigZag(true, module_index, out_row, out_col);
+	getLayoutPositionSingleRowZigZag(module_index, out_row, out_col);
 }

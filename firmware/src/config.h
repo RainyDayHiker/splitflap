@@ -94,7 +94,14 @@ const uint16_t default_offsets[NUM_MODULES] = {
 	398,
 	1876,
 	1928,
-	825};
+	825,
+	1299,
+	553,
+	1159,
+	0,
+	0,
+	0,
+};
 
 // 4) Hardware configuration and features
 #ifndef SPLITFLAP_PIO_HARDWARE_CONFIG
