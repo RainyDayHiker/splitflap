@@ -192,19 +192,29 @@ void SimpleWebServer::RespondWithFileOr404(String uri)
 			char etag[32];
 			computeETagAndOpenFile(uri, etag, sizeof(etag));
 
-			server->sendHeader("Cache-Control", "public, max-age=31536000, immutable");
-			server->sendHeader("ETag", etag);
-			server->sendHeader("X-Content-Type-Options", "nosniff");
-
-			// If If-None-Match matches our ETag, return 304
-			String inm = server->header("If-None-Match");
-			if (inm.equals(etag))
+			if (uri.endsWith(".json"))
 			{
-				server->send(304, contentType, "");
-				return;
+				// Disable caching for JSON files
+				setCommonHeaders();
+			}
+			else
+			{
+				if (uri.endsWith(".html"))
+					server->sendHeader("Cache-Control", "public, max-age=1, immutable");
+				else
+					server->sendHeader("Cache-Control", "public, max-age=31536000, immutable");
+				server->sendHeader("ETag", etag);
+				server->sendHeader("X-Content-Type-Options", "nosniff");
+
+				// If If-None-Match matches our ETag, return 304
+				String inm = server->header("If-None-Match");
+				if (inm.equals(etag))
+				{
+					server->send(304, contentType, "");
+					return;
+				}
 			}
 
-			// Normal 200 response with long cache lifetime
 			File file = LittleFS.open(uri, "r");
 			if (file)
 			{
