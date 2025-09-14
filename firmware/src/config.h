@@ -89,6 +89,12 @@ const uint8_t flaps[NUM_FLAPS] = {
 
 // Default offsets for each module - will be used if no saved config is found
 const uint16_t default_offsets[NUM_MODULES] = {
+	0,
+	0,
+	0,
+	0,
+	0,
+	1085,
 	786,
 	1855,
 	398,
