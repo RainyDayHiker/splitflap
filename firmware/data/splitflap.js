@@ -1,5 +1,8 @@
 const grid = document.getElementById('splitflap-grid');
 let state = null;
+// Cache of module DOM nodes by module index
+const moduleNodes = new Map();
+let lastLayout = { cols: null, rows: null };
 
 // Polling control
 const POLL_INTERVAL_MS = 2000; // fetch every 2s while active
@@ -37,89 +40,155 @@ function fetchState() {
 	fetch('splitflap/state.json')
 		.then(r => r.json())
 		.then(data => {
+			const previous = state;
 			state = data;
-			renderGrid();
+			renderOrUpdate(previous, state);
 		})
 		.catch(() => {
 			grid.innerHTML = '<div style="text-align:center;color:#c00;">Error loading state</div>';
+			moduleNodes.clear();
 		});
 }
 
-function renderGrid() {
-	if (!state) return;
-	const cols = state.display_columns;
-	const rows = state.display_rows;
-	grid.style.gridTemplateColumns = `repeat(${cols}, 140px)`;
-	grid.style.gridTemplateRows = `repeat(${rows}, 220px)`;
-	grid.innerHTML = '';
-	for (const flap of state.modules) {
-		const flapCharRaw = state.flaps[flap.flap_index] || '?';
-		const box = document.createElement('div');
-		box.className = 'flap-box';
-		box.setAttribute('data-row', flap.row);
-		box.setAttribute('data-col', flap.col);
-		box.style.gridColumn = flap.col + 1;
-		box.style.gridRow = flap.row + 1;
-		const isLastFlap = (flap.row === rows - 1) && (flap.col === cols - 1);
-		// Flap character only if state is NORMAL (0)
-		if (flap.state === 0) {
-			if (isLastFlap) {
-				// Weather mapping for a-f on the LAST flap only
-				switch (flapCharRaw) {
-					case 'a': box.innerHTML = `<span class="flap-emoji">&#x1F525;</span>`; break; // fire
-					case 'b': box.innerHTML = `<span class="flap-emoji">&#x2601;</span>`; break; // cloudy
-					case 'c': box.innerHTML = `<span class="flap-emoji">&#x1F327;</span>`; break; // rain
-					case 'd': box.innerHTML = `<span class="flap-emoji">&#x2744;</span>`; break; // snow
-					case 'e': box.innerHTML = `<span class="flap-emoji">&#x1F32C;</span>`; break; // wind
-					case 'f': box.innerHTML = `<span class="flap-emoji">&#x26C5;</span>`; break; // partly cloudy
-					default:
-						box.innerHTML = renderInstructionChar(flapCharRaw);
-				}
-			} else {
-				// Normal mapping for rest of flaps
-				if (flapCharRaw === 'a') {
-					box.innerHTML = `<div class="flap-color-box flap-green"></div>`;
-				} else if (flapCharRaw === 'b') {
-					box.innerHTML = `<div class="flap-color-box flap-red"></div>`;
-				} else if (flapCharRaw === 'c') { // smile
-					box.innerHTML = `<span class="flap-emoji">&#x1F603;</span>`;
-				} else if (flapCharRaw === 'd') { // frown
-					box.innerHTML = `<span class="flap-emoji">&#x2639;</span>`;
-				} else if (flapCharRaw === 'e') { // fire
-					box.innerHTML = `<span class="flap-emoji">&#x1F525;</span>`;
-				} else if (flapCharRaw === 'f') { // heart
-					box.innerHTML = `<span class="flap-emoji">&#x1F90D;</span>`;
-				} else {
-					box.innerHTML = renderInstructionChar(flapCharRaw);
-				}
+function renderOrUpdate(prev, curr) {
+	if (!curr) return;
+	const cols = curr.display_columns;
+	const rows = curr.display_rows;
+
+	// Detect layout change
+	const layoutChanged = (lastLayout.cols !== cols) || (lastLayout.rows !== rows);
+	if (layoutChanged) {
+		grid.style.gridTemplateColumns = `repeat(${cols}, 140px)`;
+		grid.style.gridTemplateRows = `repeat(${rows}, 220px)`;
+		grid.innerHTML = '';
+		moduleNodes.clear();
+		lastLayout = { cols, rows };
+	}
+
+	const seen = new Set();
+	for (const flap of curr.modules) {
+		const key = flap.index; // assume stable unique
+		seen.add(key);
+		let node = moduleNodes.get(key);
+		if (!node) {
+			node = createModuleNode(flap, curr);
+			moduleNodes.set(key, node);
+			grid.appendChild(node.container);
+		} else {
+			updateModuleNode(node, flap, curr, prev);
+		}
+	}
+
+	// Remove nodes no longer present
+	for (const [k, v] of moduleNodes.entries()) {
+		if (!seen.has(k)) {
+			v.container.remove();
+			moduleNodes.delete(k);
+		}
+	}
+}
+
+function createModuleNode(flap, stateObj) {
+	const container = document.createElement('div');
+	container.className = 'flap-box';
+	container.style.gridColumn = flap.col + 1;
+	container.style.gridRow = flap.row + 1;
+	container.setAttribute('data-row', flap.row);
+	container.setAttribute('data-col', flap.col);
+
+	const charWrapper = document.createElement('div');
+	charWrapper.className = 'flap-char-wrapper';
+	container.appendChild(charWrapper);
+
+	const offsetControls = document.createElement('div');
+	offsetControls.className = 'offset-controls';
+	offsetControls.innerHTML = `
+		<button class="offset-btn" onclick="changeOffset(${flap.index}, -5)">&lt;&lt;</button>
+		<button class="offset-btn" onclick="changeOffset(${flap.index}, -1)">&lt;</button>
+		<span class="offset-value">${flap.offset}</span>
+		<button class="offset-btn" onclick="changeOffset(${flap.index}, 1)">&gt;</button>
+		<button class="offset-btn" onclick="changeOffset(${flap.index}, 5)">&gt;&gt;</button>
+	`;
+	container.appendChild(offsetControls);
+
+	const iconDiv = document.createElement('div');
+	iconDiv.className = 'icon';
+	container.appendChild(iconDiv);
+
+	// Initial fill
+	fillCharAndIcon(charWrapper, iconDiv, flap, stateObj);
+
+	return { container, charWrapper, iconDiv, lastFlap: { ...flap } };
+}
+
+function updateModuleNode(node, flap, curr, prev) {
+	// Position changes
+	if (node.lastFlap.row !== flap.row || node.lastFlap.col !== flap.col) {
+		node.container.style.gridColumn = flap.col + 1;
+		node.container.style.gridRow = flap.row + 1;
+		node.container.setAttribute('data-row', flap.row);
+		node.container.setAttribute('data-col', flap.col);
+	}
+	// Offset value change
+	if (node.lastFlap.offset !== flap.offset) {
+		const span = node.container.querySelector('.offset-value');
+		if (span) span.textContent = flap.offset;
+	}
+	// Content/state change check
+	if (
+		node.lastFlap.flap_index !== flap.flap_index ||
+		node.lastFlap.state !== flap.state ||
+		node.lastFlap.moving !== flap.moving ||
+		(curr && prev && curr.flaps[flap.flap_index] !== prev.flaps[node.lastFlap.flap_index])
+	) {
+		fillCharAndIcon(node.charWrapper, node.iconDiv, flap, curr);
+	}
+	node.lastFlap = { ...flap };
+}
+
+function fillCharAndIcon(charWrapper, iconDiv, flap, stateObj) {
+	const rows = stateObj.display_rows;
+	const cols = stateObj.display_columns;
+	const isLastFlap = (flap.row === rows - 1) && (flap.col === cols - 1);
+	const flapCharRaw = stateObj.flaps[flap.flap_index] || '?';
+
+	let html = '';
+	if (flap.state === 0) { // NORMAL
+		if (isLastFlap) {
+			switch (flapCharRaw) {
+				case 'a': html = `<span class="flap-emoji">&#x1F525;</span>`; break;
+				case 'b': html = `<span class="flap-emoji">&#x2601;</span>`; break;
+				case 'c': html = `<span class="flap-emoji">&#x1F327;</span>`; break;
+				case 'd': html = `<span class="flap-emoji">&#x2744;</span>`; break;
+				case 'e': html = `<span class="flap-emoji">&#x1F32C;</span>`; break;
+				case 'f': html = `<span class="flap-emoji">&#x26C5;</span>`; break;
+				default: html = renderInstructionChar(flapCharRaw); break;
 			}
 		} else {
-			box.innerHTML = `<span>&nbsp;</span>`; // keep space for layout, but hide character
+			switch (flapCharRaw) {
+				case 'a': html = `<div class="flap-color-box flap-green"></div>`; break;
+				case 'b': html = `<div class="flap-color-box flap-red"></div>`; break;
+				case 'c': html = `<span class="flap-emoji">&#x1F603;</span>`; break;
+				case 'd': html = `<span class="flap-emoji">&#x2639;</span>`; break;
+				case 'e': html = `<span class="flap-emoji">&#x1F525;</span>`; break;
+				case 'f': html = `<span class="flap-emoji">&#x1F90D;</span>`; break;
+				default: html = renderInstructionChar(flapCharRaw); break;
+			}
 		}
-		// Offset controls
-		const offsetControls = document.createElement('div');
-		offsetControls.className = 'offset-controls';
-		offsetControls.innerHTML = `
-			<button class="offset-btn" onclick="changeOffset(${flap.index}, -5)">&lt;&lt;</button>
-			<button class="offset-btn" onclick="changeOffset(${flap.index}, -1)">&lt;</button>
-			<span class="offset-value">${flap.offset}</span>
-			<button class="offset-btn" onclick="changeOffset(${flap.index}, 1)">&gt;</button>
-			<button class="offset-btn" onclick="changeOffset(${flap.index}, 5)">&gt;&gt;</button>
-		`;
-		box.appendChild(offsetControls);
-		// Icon logic
-		const iconDiv = document.createElement('div');
-		iconDiv.className = 'icon';
-		iconDiv.innerHTML = getFlapIcon(flap);
-		// Tooltip
-		let tooltip = getStateName(flap.state);
-		if (flap.state === 0) { // NORMAL
-			if (flap.moving) tooltip += ' (moving)';
-		}
-		iconDiv.title = tooltip;
-		box.appendChild(iconDiv);
-		grid.appendChild(box);
+	} else {
+		html = `<span>&nbsp;</span>`;
 	}
+	if (charWrapper.innerHTML !== html) {
+		charWrapper.innerHTML = html;
+	}
+
+	const iconHtml = getFlapIcon(flap);
+	if (iconDiv.innerHTML !== iconHtml) {
+		iconDiv.innerHTML = iconHtml;
+	}
+	let tooltip = getStateName(flap.state);
+	if (flap.state === 0 && flap.moving) tooltip += ' (moving)';
+	if (iconDiv.title !== tooltip) iconDiv.title = tooltip;
 }
 
 function getFlapIcon(flap) {
