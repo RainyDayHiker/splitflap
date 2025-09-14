@@ -93,7 +93,7 @@ const uint16_t default_offsets[NUM_MODULES] = {
 	0,
 	0,
 	0,
-	0,
+	1000,
 	1085,
 	786,
 	1855,
