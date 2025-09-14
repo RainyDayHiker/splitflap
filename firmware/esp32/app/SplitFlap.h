@@ -45,4 +45,10 @@ private:
 
 	// Handler for POST /splitflap/set_flap
 	void handleSetFlap(SimpleWebServer &webServer);
+
+	// Handler for POST /splitflap/set_flap_state
+	void handleSetFlapState(SimpleWebServer &webServer);
+
+	// Handler for POST /splitflap/set_offsets
+	void handleSetOffsets(SimpleWebServer &webServer);
 };

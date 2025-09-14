@@ -39,12 +39,20 @@ void SplitFlap::registerHandlers(SimpleWebServer &webServer)
 {
 	webServer.AddHandler("/splitflap/state.json", [this, &webServer]()
 						 {
-      String json = buildStateJson();
-      webServer.RespondWithContent(200, json); });
+			String json = buildStateJson();
+			webServer.RespondWithContent(200, json, ".json"); });
 
 	// Set a single flap's target character via dedicated handler
 	webServer.AddHandler("/splitflap/set_flap", HTTP_POST, [this, &webServer]()
 						 { handleSetFlap(webServer); });
+
+	// Set all flaps to a string
+	webServer.AddHandler("/splitflap/set_flaps", HTTP_POST, [this, &webServer]()
+						 { handleSetFlapState(webServer); });
+
+	// Set all offsets
+	webServer.AddHandler("/splitflap/set_home_offsets", HTTP_POST, [this, &webServer]()
+						 { handleSetOffsets(webServer); });
 }
 
 void SplitFlap::handleSetFlap(SimpleWebServer &webServer)
@@ -125,7 +133,6 @@ String SplitFlap::buildStateJson()
 	for (uint8_t i = 0; i < NUM_FLAPS; i++)
 	{
 		char c = (char)flaps[i];
-		// For JSON, we can just add as a one-character string
 		char buf[2] = {c, '\0'};
 		flapsArray.add(buf);
 	}
@@ -152,4 +159,117 @@ String SplitFlap::buildStateJson()
 	String json;
 	serializeJson(doc, json);
 	return json;
+}
+// Handler for POST /splitflap/set_flap_state
+void SplitFlap::handleSetFlapState(SimpleWebServer &webServer)
+{
+	// API: POST /splitflap/set_flap_state
+	// Body: plain text string whose length == NUM_MODULES
+	// NOTE: SimpleWebServer lacks GetRequestBody helper, so we attempt to read via an arg named 's'
+	// or fall back to a 'state' arg; this keeps compatibility with form submissions.
+	String str;
+	if (!webServer.GetRequestArg("s", str))
+	{
+		webServer.GetRequestArg("state", str); // ignore result, str stays empty if absent
+	}
+	if (str.length() == 0)
+	{
+		webServer.RespondWithContent(400, String("{\"error\":\"missing string\"}"));
+		return;
+	}
+	if (str.length() != NUM_MODULES)
+	{
+		webServer.RespondWithContent(400, String("{\"error\":\"length mismatch\"}"));
+		return;
+	}
+	// Validate all chars
+	for (uint8_t i = 0; i < NUM_MODULES; i++)
+	{
+		char c = str[i];
+		bool valid = false;
+		for (uint8_t j = 0; j < NUM_FLAPS; j++)
+		{
+			if (flaps[j] == (uint8_t)c)
+			{
+				valid = true;
+				break;
+			}
+		}
+		if (!valid)
+		{
+			webServer.RespondWithContent(400, String("{\"error\":\"invalid char\"}"));
+			return;
+		}
+	}
+	splitFlap.showString(str.c_str(), NUM_MODULES, false);
+	webServer.RespondWithContent(200, String("{\"ok\":true}"));
+}
+
+// Handler for POST /splitflap/set_offsets
+void SplitFlap::handleSetOffsets(SimpleWebServer &webServer)
+{
+	// API: POST /splitflap/set_offsets
+	// Accepts either:
+	//  - Form args: o0=123&o1=456&... up to NUM_MODULES
+	//  - Or a single arg: offsets=123,456,... (comma separated, NUM_MODULES values)
+	uint16_t offsets[NUM_MODULES];
+	bool haveAll = true;
+	for (uint8_t i = 0; i < NUM_MODULES; i++)
+	{
+		String key = String("o") + i;
+		String val;
+		if (webServer.GetRequestArg(key.c_str(), val))
+		{
+			offsets[i] = (uint16_t)val.toInt();
+		}
+		else
+		{
+			haveAll = false;
+			break;
+		}
+	}
+	if (!haveAll)
+	{
+		// Try comma-separated list
+		String csv;
+		if (!webServer.GetRequestArg("offsets", csv))
+		{
+			webServer.RespondWithContent(400, String("{\"error\":\"missing offsets\"}"));
+			return;
+		}
+		// Parse
+		uint8_t idx = 0;
+		int start = 0;
+		while (idx < NUM_MODULES)
+		{
+			int comma = csv.indexOf(',', start);
+			String token;
+			if (comma == -1)
+			{
+				token = csv.substring(start);
+			}
+			else
+			{
+				token = csv.substring(start, comma);
+			}
+			token.trim();
+			if (token.length() == 0)
+			{
+				webServer.RespondWithContent(400, String("{\"error\":\"empty token\"}"));
+				return;
+			}
+			offsets[idx] = (uint16_t)token.toInt();
+			idx++;
+			if (comma == -1)
+				break;
+			start = comma + 1;
+		}
+		if (idx != NUM_MODULES)
+		{
+			webServer.RespondWithContent(400, String("{\"error\":\"length mismatch\"}"));
+			return;
+		}
+	}
+	splitFlap.restoreAllOffsets(offsets);
+	webServer.RespondWithContent(200, String("{\"ok\":true}"));
 }
