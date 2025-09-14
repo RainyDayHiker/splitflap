@@ -58,8 +58,8 @@ function renderOrUpdate(prev, curr) {
 	// Detect layout change
 	const layoutChanged = (lastLayout.cols !== cols) || (lastLayout.rows !== rows);
 	if (layoutChanged) {
-		grid.style.gridTemplateColumns = `repeat(${cols}, 140px)`;
-		grid.style.gridTemplateRows = `repeat(${rows}, 220px)`;
+		grid.style.gridTemplateColumns = `repeat(${cols}, 70px)`;
+		grid.style.gridTemplateRows = `repeat(${rows}, 110px)`;
 		grid.innerHTML = '';
 		moduleNodes.clear();
 		lastLayout = { cols, rows };
@@ -100,17 +100,6 @@ function createModuleNode(flap, stateObj) {
 	charWrapper.className = 'flap-char-wrapper';
 	container.appendChild(charWrapper);
 
-	const offsetControls = document.createElement('div');
-	offsetControls.className = 'offset-controls';
-	offsetControls.innerHTML = `
-		<button class="offset-btn" onclick="changeOffset(${flap.index}, -5)">&lt;&lt;</button>
-		<button class="offset-btn" onclick="changeOffset(${flap.index}, -1)">&lt;</button>
-		<span class="offset-value">${flap.offset}</span>
-		<button class="offset-btn" onclick="changeOffset(${flap.index}, 1)">&gt;</button>
-		<button class="offset-btn" onclick="changeOffset(${flap.index}, 5)">&gt;&gt;</button>
-	`;
-	container.appendChild(offsetControls);
-
 	const iconDiv = document.createElement('div');
 	iconDiv.className = 'icon';
 	container.appendChild(iconDiv);
@@ -128,11 +117,6 @@ function updateModuleNode(node, flap, curr, prev) {
 		node.container.style.gridRow = flap.row + 1;
 		node.container.setAttribute('data-row', flap.row);
 		node.container.setAttribute('data-col', flap.col);
-	}
-	// Offset value change
-	if (node.lastFlap.offset !== flap.offset) {
-		const span = node.container.querySelector('.offset-value');
-		if (span) span.textContent = flap.offset;
 	}
 	// Content/state change check
 	if (
@@ -213,11 +197,6 @@ function getFlapIcon(flap) {
 			return '';
 	}
 }
-
-window.changeOffset = function (index, delta) {
-	// TODO: Implement backend call to change offset
-	alert(`Change offset for module ${index} by ${delta}`);
-};
 
 function stopPolling(timeout = false) {
 	if (pollIntervalId !== null) {
