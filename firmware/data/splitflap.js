@@ -156,7 +156,7 @@ function fillCharAndIcon(charWrapper, iconDiv, flap, stateObj) {
 	if (flap.state === 0) { // NORMAL
 		if (isLastFlap) {
 			switch (flapCharRaw) {
-				case 'a': html = `<span class="flap-emoji">&#x1F525;</span>`; break;
+				case 'a': html = `<span class="flap-emoji">&#x2600;</span>`; break;
 				case 'b': html = `<span class="flap-emoji">&#x2601;</span>`; break;
 				case 'c': html = `<span class="flap-emoji">&#x1F327;</span>`; break;
 				case 'd': html = `<span class="flap-emoji">&#x2744;</span>`; break;

@@ -8,25 +8,21 @@
 .flap-center-exclam {
 	position: relative;
 	left: 0.18em;
-	top: 0.0em;
 }
 
 .flap-center-dot {
 	position: relative;
-	left: 0.12em;
-	top: 0.12em;
+	left: 0.16em;
 }
 
 .flap-center-comma {
 	position: relative;
-	left: 0.14em;
-	top: 0.16em;
+	left: 0.16em;
 }
 
 .flap-center-quote {
 	position: relative;
-	left: 0.10em;
-	top: 0.06em;
+	left: 0.16em;
 }
 
 /* Colored box for green/red flaps */
