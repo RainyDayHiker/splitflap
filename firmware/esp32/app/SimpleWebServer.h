@@ -35,7 +35,18 @@ protected:
 private:
 	void setCommonHeaders(); // Helper method to set security headers
 	void HandlePath();
-	void computeETagAndOpenFile(const String &uri, char *etagBuffer, size_t etagBufferLen);
+
+	// Diagnostics handlers
+	void HandleHeapDiagnostics();
+	void HandleSystemDiagnostics();
+	void HandleNetworkDiagnostics();
+
+	// Internal perf counters (updated in run loop)
+	volatile uint32_t loopCount = 0;			 // Loops counted within current 1s window
+	volatile uint32_t loopsPerSecond = 0;		 // Last computed loops/sec
+	volatile uint32_t handleClientCalls = 0;	 // Number of handleClient() calls in window
+	volatile uint32_t handleClientMicrosAcc = 0; // Accumulated time spent in handleClient in microseconds (window)
+	uint32_t lastStatsMillis = 0;				 // For 1s window rollover
 
 	Logger &logger;
 	WebServer *server;

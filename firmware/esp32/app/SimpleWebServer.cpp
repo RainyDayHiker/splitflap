@@ -1,8 +1,9 @@
 #include "SimpleWebServer.h"
 #include <Arduino.h>
 #include <LittleFS.h>
-
 #include <FS.h>
+#include <WiFi.h>
+#include <esp_wifi.h>
 
 namespace mime
 {
@@ -104,6 +105,11 @@ bool SimpleWebServer::Start(std::function<bool(String)> handleCaptivePortal)
 	// Set up routes
 	server->onNotFound(std::bind(&SimpleWebServer::HandlePath, this));
 
+	// Diagnostics endpoints (plaintext / simple JSON-like output)
+	server->on("/diagnostics/heap", std::bind(&SimpleWebServer::HandleHeapDiagnostics, this));
+	server->on("/diagnostics/system", std::bind(&SimpleWebServer::HandleSystemDiagnostics, this));
+	server->on("/diagnostics/network", std::bind(&SimpleWebServer::HandleNetworkDiagnostics, this));
+
 	// Start the server
 	server->begin();
 
@@ -201,7 +207,7 @@ void SimpleWebServer::RespondWithFileOr404(String uri)
 				file.close();
 				return;
 			}
-			// logger.logf("File failed to open after finding it!");
+			logger.logf("File failed to open after finding it!");
 		}
 		logger.logf("File not found: %s", uri.c_str());
 	}
@@ -235,42 +241,145 @@ void SimpleWebServer::run()
 {
 	while (running)
 	{
+		uint32_t startLoop = micros();
+		uint32_t hcStart = micros();
 		if (server != nullptr)
+		{
 			server->handleClient();
+			uint32_t hcElapsed = micros() - hcStart;
+			handleClientMicrosAcc += hcElapsed;
+			handleClientCalls++;
+		}
 
-		vTaskDelay(pdMS_TO_TICKS(10)); // Small delay to prevent watchdog issues
+		loopCount++;
+		uint32_t now = millis();
+		if (now - lastStatsMillis >= 1000)
+		{
+			loopsPerSecond = loopCount;
+			loopCount = 0;
+			handleClientMicrosAcc = 0; // Reset window accumulators after sampling endpoints can read them
+			handleClientCalls = 0;
+			lastStatsMillis = now;
+		}
+
+		// Short delay – tuneable. Reducing this (e.g. to 2ms) can improve latency at cost of CPU.
+		vTaskDelay(pdMS_TO_TICKS(5));
 	}
 }
 
-void SimpleWebServer::computeETagAndOpenFile(const String &uri, char *etagBuffer, size_t etagBufferLen)
-{
-	File file = LittleFS.open(uri, "r");
-	if (!file)
-		return;
+// ----------------------- Diagnostics -----------------------
 
-	uint32_t hash = 2166136261u; // FNV-1a 32-bit
-	uint32_t size = file.size();
-	uint8_t buf[64];
-	int toRead = size < (int)sizeof(buf) ? size : (int)sizeof(buf);
-	if (toRead > 0)
+void SimpleWebServer::HandleHeapDiagnostics()
+{
+	String out;
+	out.reserve(256);
+	out += "{\n";
+	out += "  \"free_heap\": ";
+	out += String(ESP.getFreeHeap());
+	out += ",\n";
+	out += "  \"min_free_heap\": ";
+	out += String(ESP.getMinFreeHeap());
+	out += ",\n";
+	out += "  \"max_alloc_heap\": ";
+	out += String(ESP.getMaxAllocHeap());
+	out += ",\n";
+#ifdef BOARD_HAS_PSRAM
+	out += "  \"free_psram\": ";
+	out += String(ESP.getFreePsram());
+	out += ",\n";
+#endif
+	out += "  \"sketch_free_space\": ";
+	out += String(ESP.getFreeSketchSpace());
+	out += "\n";
+	out += "}\n";
+	RespondWithContent(200, out, ".json");
+}
+
+void SimpleWebServer::HandleSystemDiagnostics()
+{
+	// Grab snapshot (avoid inconsistency while building String)
+	uint32_t loops = loopsPerSecond;
+	uint32_t hcCalls = handleClientCalls;
+	uint32_t hcMicros = handleClientMicrosAcc; // This will show zero if sampled just after rollover
+	UBaseType_t watermark = uxTaskGetStackHighWaterMark(NULL);
+	String out;
+	out.reserve(320);
+	out += "{\n";
+	out += "  \"uptime_ms\": ";
+	out += String(millis());
+	out += ",\n";
+	out += "  \"task_core\": ";
+	out += String(xPortGetCoreID());
+	out += ",\n";
+	out += "  \"task_priority\": ";
+	out += String(uxTaskPriorityGet(NULL));
+	out += ",\n";
+	out += "  \"stack_high_water_mark_words\": ";
+	out += String(watermark);
+	out += ",\n";
+	out += "  \"loops_per_sec\": ";
+	out += String(loops);
+	out += ",\n";
+	out += "  \"handle_client_calls\": ";
+	out += String(hcCalls);
+	out += ",\n";
+	out += "  \"avg_handle_client_us\": ";
+	if (hcCalls > 0)
+		out += String((double)hcMicros / (double)hcCalls, 2);
+	else
+		out += "0";
+	out += "\n";
+	out += "}\n";
+	RespondWithContent(200, out, ".json");
+}
+
+void SimpleWebServer::HandleNetworkDiagnostics()
+{
+	wl_status_t st = WiFi.status();
+	String out;
+	out.reserve(320);
+	out += "{\n";
+	out += "  \"status\": \"";
+	switch (st)
 	{
-		int n = file.read(buf, toRead);
-		for (int i = 0; i < n; i++)
-		{
-			hash ^= buf[i];
-			hash *= 16777619u;
-		}
+	case WL_CONNECTED:
+		out += "connected";
+		break;
+	case WL_NO_SSID_AVAIL:
+		out += "no_ssid";
+		break;
+	case WL_CONNECT_FAILED:
+		out += "connect_failed";
+		break;
+	case WL_IDLE_STATUS:
+		out += "idle";
+		break;
+	case WL_DISCONNECTED:
+		out += "disconnected";
+		break;
+	default:
+		out += "other";
+		break;
 	}
-	if (size > (int)sizeof(buf))
-	{
-		file.seek(size - sizeof(buf), SeekSet);
-		int n = file.read(buf, sizeof(buf));
-		for (int i = 0; i < n; i++)
-		{
-			hash ^= buf[i];
-			hash *= 16777619u;
-		}
-	}
-	snprintf(etagBuffer, etagBufferLen, "W/\"%08lx-%lx\"", (unsigned long)size, (unsigned long)hash);
-	file.close();
+	out += "\",\n";
+	out += "  \"ssid\": \"";
+	out += WiFi.SSID();
+	out += "\",\n";
+	out += "  \"bssid\": \"";
+	out += WiFi.BSSIDstr();
+	out += "\",\n";
+	out += "  \"rssi_dbm\": ";
+	out += String(WiFi.RSSI());
+	out += ",\n";
+	out += "  \"ip\": \"";
+	out += WiFi.localIP().toString();
+	out += "\",\n";
+	out += "  \"gateway\": \"";
+	out += WiFi.gatewayIP().toString();
+	out += "\",\n";
+	out += "  \"subnet\": \"";
+	out += WiFi.subnetMask().toString();
+	out += "\"\n";
+	out += "}\n";
+	RespondWithContent(200, out, ".json");
 }

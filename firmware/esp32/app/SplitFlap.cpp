@@ -41,6 +41,66 @@ void SplitFlap::registerHandlers(SimpleWebServer &webServer)
 						 {
       String json = buildStateJson();
       webServer.RespondWithContent(200, json); });
+
+	// Set a single flap's target character via dedicated handler
+	webServer.AddHandler("/splitflap/set_flap", HTTP_POST, [this, &webServer]()
+						 { handleSetFlap(webServer); });
+}
+
+void SplitFlap::handleSetFlap(SimpleWebServer &webServer)
+{
+	// API: POST /splitflap/set_flap
+	// Params (x-www-form-urlencoded or query):
+	//   index: 0-based module index
+	//   char: single character that must exist in global flaps[] list
+	// Response: {"ok":true} or {"error":"message"}
+	// Implementation detail: we rebuild the full display string from current
+	// state and replace the specified module's character, then call showString.
+	// Optimization opportunity: send targeted command instead of full string.
+	String indexStr;
+	String charStr;
+	if (!webServer.GetRequestArg("index", indexStr) || !webServer.GetRequestArg("char", charStr))
+	{
+		webServer.RespondWithContent(400, String("{\"error\":\"missing params\"}"));
+		return;
+	}
+	int moduleIndex = indexStr.toInt();
+	if (moduleIndex < 0 || moduleIndex >= NUM_MODULES)
+	{
+		webServer.RespondWithContent(400, String("{\"error\":\"invalid index\"}"));
+		return;
+	}
+	if (charStr.length() == 0)
+	{
+		webServer.RespondWithContent(400, String("{\"error\":\"empty char\"}"));
+		return;
+	}
+	char newChar = charStr[0];
+	bool valid = false;
+	for (uint8_t i = 0; i < NUM_FLAPS; i++)
+	{
+		if (flaps[i] == (uint8_t)newChar)
+		{
+			valid = true;
+			break;
+		}
+	}
+	if (!valid)
+	{
+		webServer.RespondWithContent(400, String("{\"error\":\"invalid char\"}"));
+		return;
+	}
+	SplitflapState state = splitFlap.getState();
+	char buf[NUM_MODULES + 1];
+	for (uint8_t i = 0; i < NUM_MODULES; i++)
+	{
+		uint8_t currentFlapIdx = state.modules[i].flap_index;
+		buf[i] = (char)flaps[currentFlapIdx];
+	}
+	buf[NUM_MODULES] = '\0';
+	buf[moduleIndex] = newChar;
+	splitFlap.showString(buf, NUM_MODULES, false);
+	webServer.RespondWithContent(200, String("{\"ok\":true}"));
 }
 
 String SplitFlap::buildStateJson()

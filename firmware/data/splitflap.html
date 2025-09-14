@@ -15,10 +15,26 @@
 <body>
 	<h1>Splitflap Display</h1>
 	<div id="splitflap-grid"></div>
+
+	<!-- Character picker overlay -->
+	<div id="char-picker-overlay">
+		<div id="char-picker">
+			<div class="char-picker-header">
+				<h2>Pick Character</h2>
+			</div>
+			<div id="char-picker-grid"></div>
+			<div class="char-picker-actions">
+				<button id="char-picker-cancel"
+						class="char-picker-button">Cancel</button>
+			</div>
+		</div>
+	</div>
+
 	<div id="poll-controls">
 		<span id="poll-status"></span>
 		<button id="toggle-poll">Stop Polling</button>
 	</div>
+
 	<script src="splitflap.js"></script>
 </body>
 

@@ -42,4 +42,7 @@ private:
 
 	// Builds the JSON state string for /splitflap/state.json
 	String buildStateJson();
+
+	// Handler for POST /splitflap/set_flap
+	void handleSetFlap(SimpleWebServer &webServer);
 };

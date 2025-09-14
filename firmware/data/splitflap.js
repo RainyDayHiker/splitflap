@@ -260,3 +260,85 @@ toggleBtn.addEventListener('click', () => {
 
 // Kick off polling lifecycle
 startPolling();
+
+// Character picker implementation
+// Clicking on any .flap-box opens a modal overlay listing all characters defined in state.flaps.
+// Selecting one issues a POST to /splitflap/set_flap to update only that module.
+const pickerOverlay = document.getElementById('char-picker-overlay');
+const pickerGrid = document.getElementById('char-picker-grid');
+const pickerCancel = document.getElementById('char-picker-cancel');
+let pickerModuleIndex = null;
+
+function openPicker(moduleIndex) {
+	if (!state) return;
+	pickerModuleIndex = moduleIndex;
+	pickerGrid.innerHTML = '';
+	const currentFlapIdx = state.modules[moduleIndex].flap_index;
+	const currentChar = state.flaps[currentFlapIdx];
+	// Build options
+	state.flaps.forEach(ch => {
+		const div = document.createElement('div');
+		div.className = 'char-option' + (ch === currentChar ? ' current' : '');
+		div.textContent = ch;
+		div.addEventListener('click', () => selectCharacter(ch));
+		pickerGrid.appendChild(div);
+	});
+	pickerOverlay.style.display = 'flex';
+}
+
+function closePicker() {
+	pickerOverlay.style.display = 'none';
+	pickerModuleIndex = null;
+}
+
+pickerCancel && pickerCancel.addEventListener('click', closePicker);
+pickerOverlay && pickerOverlay.addEventListener('click', (e) => {
+	if (e.target === pickerOverlay) closePicker();
+});
+
+function selectCharacter(ch) {
+	if (pickerModuleIndex == null) return;
+	const formData = new URLSearchParams();
+	formData.append('index', pickerModuleIndex);
+	formData.append('char', ch);
+	fetch('/splitflap/set_flap', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: formData.toString() })
+		.then(r => r.json().catch(() => ({})))
+		.then(resp => {
+			if (!resp || resp.ok !== true) {
+				console.warn('Set flap error', resp);
+				return;
+			}
+			// Update local state optimistically
+			const flapIndex = state.flaps.indexOf(ch);
+			if (flapIndex >= 0) {
+				state.modules[pickerModuleIndex].flap_index = flapIndex;
+				// Re-render just that module
+				const moduleNode = moduleNodes.get(pickerModuleIndex);
+				if (moduleNode) {
+					fillCharAndIcon(moduleNode.charWrapper, moduleNode.iconDiv, { ...state.modules[pickerModuleIndex], index: pickerModuleIndex, row: moduleNode.container.getAttribute('data-row') | 0, col: moduleNode.container.getAttribute('data-col') | 0 }, state);
+					moduleNode.lastFlap.flap_index = flapIndex;
+				}
+			}
+		})
+		.catch(err => console.error('Set flap fetch failed', err))
+		.finally(closePicker);
+}
+
+// Add click listeners via event delegation
+grid.addEventListener('click', (e) => {
+	// Find ancestor with class flap-box
+	let node = e.target;
+	while (node && node !== grid && !node.classList.contains('flap-box')) node = node.parentElement;
+	if (node && node.classList.contains('flap-box')) {
+		const col = parseInt(node.getAttribute('data-col'), 10);
+		const row = parseInt(node.getAttribute('data-row'), 10);
+		if (isNaN(col) || isNaN(row) || !state) return;
+		// Determine module index from row/col by scanning state.modules which store row/col in DOM only; use moduleNodes map reverse
+		for (const [idx, mNode] of moduleNodes.entries()) {
+			if (mNode.container === node) {
+				openPicker(idx);
+				break;
+			}
+		}
+	}
+});
