@@ -2,6 +2,8 @@ let flapState = [];
 let offsets = [];
 let modulesMeta = [];// stores full module objects including row/col
 let displayColumns = 0; // number of columns for grid layout
+let offsetMin = 0;
+let offsetMaxExclusive = null; // steps_per_revolution
 
 function fetchState() {
 	fetch('/splitflap/state.json').then(r => r.json()).then(data => {
@@ -15,8 +17,22 @@ function fetchState() {
 		displayColumns = data.display_columns || 0;
 		flapState = modulesMeta.map(m => m.flap_index);
 		offsets = modulesMeta.map(m => m.offset);
+		offsetMin = (typeof data.offset_min === 'number') ? data.offset_min : 0;
+		offsetMaxExclusive = (typeof data.offset_max_exclusive === 'number') ? data.offset_max_exclusive : (data.steps_per_revolution || null);
+		numFlaps = data.num_flaps || 52;
+		updateRangeInfo();
 		renderGrid();
 	});
+}
+
+function updateRangeInfo() {
+	const el = document.getElementById('rangeInfo');
+	if (!el) return;
+	if (offsetMaxExclusive != null) {
+		el.textContent = `Offset range: ${offsetMin} to ${offsetMaxExclusive - 1} (${Math.round(offsetMaxExclusive / numFlaps)} per flap)`;
+	} else {
+		el.textContent = '';
+	}
 }
 
 function renderGrid() {
@@ -40,11 +56,19 @@ function renderGrid() {
 		input.className = 'offset-input';
 		input.value = offsets[i];
 		input.setAttribute('data-idx', i);
+		if (offsetMaxExclusive != null) {
+			input.min = offsetMin;
+			input.max = offsetMaxExclusive - 1; // inclusive max for HTML attribute
+		}
 		input.onchange = () => {
-			const val = parseInt(input.value);
-			if (!isNaN(val)) {
-				offsets[i] = val;
+			let val = parseInt(input.value);
+			if (isNaN(val)) return;
+			if (offsetMaxExclusive != null) {
+				if (val < offsetMin) val = offsetMin;
+				if (val >= offsetMaxExclusive) val = offsetMaxExclusive - 1;
+				input.value = val;
 			}
+			offsets[i] = val;
 		};
 		cell.appendChild(input);
 		grid.appendChild(cell);
@@ -53,9 +77,22 @@ function renderGrid() {
 
 function changeOffset(idx, delta) {
 	offsets[idx] += delta;
+	if (offsetMaxExclusive != null) {
+		if (offsets[idx] < offsetMin) offsets[idx] = offsetMin;
+		if (offsets[idx] >= offsetMaxExclusive) offsets[idx] = offsetMaxExclusive - 1;
+	}
 }
 
 document.getElementById('apply').onclick = function () {
+	// Final validation before submit
+	if (offsetMaxExclusive != null) {
+		for (let i = 0; i < offsets.length; i++) {
+			if (offsets[i] < offsetMin || offsets[i] >= offsetMaxExclusive) {
+				alert(`Offset ${i} out of range (${offsets[i]}). Allowed: ${offsetMin} - ${offsetMaxExclusive - 1}`);
+				return;
+			}
+		}
+	}
 	const csv = offsets.join(',');
 	const body = 'offsets=' + encodeURIComponent(csv);
 	fetch('/splitflap/set_home_offsets', {

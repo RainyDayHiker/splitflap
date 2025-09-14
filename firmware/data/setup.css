@@ -44,3 +44,9 @@ body {
 }
 
 /* ...existing code... */
+
+#rangeInfo {
+	margin-bottom: 8px;
+	font-size: 0.9em;
+	color: #444;
+}

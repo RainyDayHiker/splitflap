@@ -20,6 +20,12 @@
 #include "SimpleWebServer.h"
 #include <ArduinoJson.h>
 #include "../splitflap/display_layouts.h"
+// Avoid including splitflap_module.h here (it contains function definitions that would cause
+// multiple definition linker errors if pulled into this translation unit). We only need
+// the STEPS_PER_REVOLUTION constant for reporting, so mirror it if not already defined.
+#ifndef STEPS_PER_REVOLUTION
+#define STEPS_PER_REVOLUTION 2048 // Keep in sync with splitflap_module.h
+#endif
 
 SplitFlap::SplitFlap(SplitflapTask &splitflapTask, Logger &logger, const uint8_t task_core) : Task("SplitFlap", 8192, 1, task_core),
 																							  splitFlap(splitflapTask),
@@ -126,6 +132,10 @@ String SplitFlap::buildStateJson()
 	doc["display_columns"] = DISPLAY_COLUMNS;
 	uint16_t display_rows = (NUM_MODULES + DISPLAY_COLUMNS - 1) / DISPLAY_COLUMNS;
 	doc["display_rows"] = display_rows;
+	// Mechanical metadata
+	doc["steps_per_revolution"] = STEPS_PER_REVOLUTION;
+	doc["offset_min"] = 0;								// inclusive
+	doc["offset_max_exclusive"] = STEPS_PER_REVOLUTION; // valid offsets are < this value
 
 	// Flap metadata
 	doc["num_flaps"] = NUM_FLAPS;
@@ -221,6 +231,11 @@ void SplitFlap::handleSetOffsets(SimpleWebServer &webServer)
 		if (webServer.GetRequestArg(key.c_str(), val))
 		{
 			offsets[i] = (uint16_t)val.toInt();
+			if (offsets[i] >= STEPS_PER_REVOLUTION)
+			{
+				webServer.RespondWithContent(400, String("{\"error\":\"offset out of range\"}"));
+				return;
+			}
 		}
 		else
 		{
@@ -259,6 +274,11 @@ void SplitFlap::handleSetOffsets(SimpleWebServer &webServer)
 				return;
 			}
 			offsets[idx] = (uint16_t)token.toInt();
+			if (offsets[idx] >= STEPS_PER_REVOLUTION)
+			{
+				webServer.RespondWithContent(400, String("{\"error\":\"offset out of range\"}"));
+				return;
+			}
 			idx++;
 			if (comma == -1)
 				break;
