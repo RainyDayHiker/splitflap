@@ -1,0 +1,174 @@
+/* Individual centering tweaks for problematic characters */
+.flap-center-colon {
+	position: relative;
+	left: 0.16em;
+	top: -0.1em;
+}
+
+.flap-center-exclam {
+	position: relative;
+	left: 0.18em;
+	top: 0.0em;
+}
+
+.flap-center-dot {
+	position: relative;
+	left: 0.12em;
+	top: 0.12em;
+}
+
+.flap-center-comma {
+	position: relative;
+	left: 0.14em;
+	top: 0.16em;
+}
+
+.flap-center-quote {
+	position: relative;
+	left: 0.10em;
+	top: 0.06em;
+}
+
+/* Colored box for green/red flaps */
+.flap-color-box {
+	width: 80%;
+	height: 100%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	border-radius: 8px;
+	margin-top: 30px;
+	margin-bottom: 45px;
+}
+
+body {
+	font-family: Arial, sans-serif;
+	background: #f8f8f8;
+	margin: 0;
+	padding: 0;
+}
+
+h1 {
+	text-align: center;
+	margin-top: 20px;
+}
+
+#splitflap-grid {
+	display: grid;
+	justify-content: center;
+	gap: 0;
+	margin: 32px auto;
+}
+
+.flap-box {
+	height: 220px;
+	background: #fff;
+	border-right: 2px solid #333;
+	border-bottom: 2px solid #333;
+	border-radius: 0;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+	position: relative;
+	display: flex;
+	flex-direction: column;
+	font-size: 124px;
+	color: #222;
+	transition: border-color 0.2s;
+	justify-content: center;
+	align-items: center;
+}
+
+/* Top border for first row */
+.flap-box[data-row="0"] {
+	border-top: 2px solid #333;
+}
+
+/* Left border for first column */
+.flap-box[data-col="0"] {
+	border-left: 2px solid #333;
+}
+
+.flap-box .offset-controls {
+	position: absolute;
+	bottom: 8px;
+	left: 0;
+	width: 100%;
+	text-align: center;
+	font-size: 14px;
+}
+
+.flap-box .offset-controls {
+	width: 100%;
+	box-sizing: border-box;
+}
+
+.flap-box .icon {
+	position: absolute;
+	top: 8px;
+	right: 8px;
+	width: 24px;
+	height: 24px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.flap-box .icon svg {
+	width: 20px;
+	height: 20px;
+}
+
+/* Polling controls (bottom) */
+#poll-controls {
+	margin: 24px auto 32px auto;
+	text-align: center;
+}
+
+#poll-status {
+	margin-right: 16px;
+	color: #555;
+	font-size: 0.9em;
+}
+
+#toggle-poll {
+	background: #444;
+	color: #fff;
+	border: none;
+	padding: 6px 14px;
+	border-radius: 6px;
+	cursor: pointer;
+	font-size: 14px;
+}
+
+#toggle-poll:hover {
+	background: #222;
+}
+
+.flap-box .offset-value {
+	font-size: 10px;
+	color: #666;
+	margin-top: 2px;
+}
+
+.flap-box .offset-btn {
+	background: #eee;
+	border: none;
+	border-radius: 4px;
+	margin: 0px;
+	padding: 2px 3px;
+	cursor: pointer;
+	font-size: 10px;
+}
+
+.flap-green {
+	background: #2ecc40;
+	color: #fff;
+}
+
+.flap-red {
+	background: #e74c3c;
+	color: #fff;
+}
+
+.flap-emoji {
+	font-size: 100px;
+}

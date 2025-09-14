@@ -78,7 +78,7 @@ void Clock::run()
 		char emoji = 'a' + timeinfo.tm_wday;
 		if (emoji == 'g')
 			emoji = '!';
-		snprintf(buf, sizeof(buf), "%s%c", temp, emoji);
+		snprintf(buf, sizeof(buf), "%s%ccae", temp, emoji);
 		logger.logf("Clock: updating time to %s", buf);
 		splitFlap.showString(buf, NUM_MODULES, false);
 		delay(55 * 1000);

@@ -5,6 +5,7 @@
 #include "Network.h"
 #include "Config.h"
 #include "Log.h"
+#include "SplitFlap.h"
 
 class App : public Log
 {
@@ -22,6 +23,10 @@ private:
 	SimpleWebServer simpleWebServer;
 	Network network;
 	Config config;
+	SplitFlap splitFlap; 
+
+
+	void registerHandlers();
 
 	std::deque<std::string> logBuffer_;
 	static constexpr size_t LOG_BUFFER_SIZE = 15;

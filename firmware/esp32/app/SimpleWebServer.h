@@ -26,7 +26,7 @@ public:
 
 	void RespondWithFileOr404(String uri);
 	void RespondWith404();
-	void RespondWithContent(int responseCode, String response);
+	void RespondWithContent(int responseCode, String response, String fileType = ".txt");
 	void Redirect(String uri);
 
 protected:

@@ -42,12 +42,12 @@ namespace mime
 	};
 
 	const Entry mimeTable[maxType] = {
-		{".html", "text/html"},
-		{".htm", "text/html"},
-		{".txt", "text/plain"},
-		{".css", "text/css"},
-		{".js", "text/javascript"},
-		{".json", "application/json"},
+		{".html", "text/html; charset=utf-8"},
+		{".htm", "text/html; charset=utf-8"},
+		{".txt", "text/plain; charset=utf-8"},
+		{".css", "text/css; charset=utf-8"},
+		{".js", "text/javascript; charset=utf-8"},
+		{".json", "application/json; charset=utf-8"},
 		{".png", "image/png"},
 		{".gif", "image/gif"},
 		{".jpg", "image/jpeg"},
@@ -63,7 +63,7 @@ namespace mime
 		{".xml", "application/xml"},
 		{".pdf", "application/pdf"},
 		{".zip", "application/zip"},
-		{".appcache", "text/cache-manifest"},
+		{".appcache", "text/cache-manifest; charset=utf-8"},
 		{".gz", "application/gzip"},
 		{".none", "application/octet-stream"}};
 
@@ -181,39 +181,18 @@ void SimpleWebServer::RespondWithFileOr404(String uri)
 			uri += "index.html";
 
 		String contentType = mime::getContentType(uri);
-		// Add charset=utf-8 for text content types
-		if (contentType.startsWith("text/") || contentType == "application/json")
-			contentType += "; charset=utf-8";
 
 		if (LittleFS.exists(uri))
 		{
 			// logger.logf("File found, sending response: %s", uri.c_str());
-
-			char etag[32];
-			computeETagAndOpenFile(uri, etag, sizeof(etag));
-
-			if (uri.endsWith(".json"))
+			if (uri.endsWith(".ttf") || uri.endsWith(".otf"))
 			{
-				// Disable caching for JSON files
-				setCommonHeaders();
+				// Special handling for fonts to allow caching
+				server->sendHeader("X-Content-Type-Options", "nosniff");
+				server->sendHeader("Cache-Control", "public, max-age=31536000"); // Cache for 1 year
 			}
 			else
-			{
-				if (uri.endsWith(".html"))
-					server->sendHeader("Cache-Control", "public, max-age=1, immutable");
-				else
-					server->sendHeader("Cache-Control", "public, max-age=31536000, immutable");
-				server->sendHeader("ETag", etag);
-				server->sendHeader("X-Content-Type-Options", "nosniff");
-
-				// If If-None-Match matches our ETag, return 304
-				String inm = server->header("If-None-Match");
-				if (inm.equals(etag))
-				{
-					server->send(304, contentType, "");
-					return;
-				}
-			}
+				setCommonHeaders();
 
 			File file = LittleFS.open(uri, "r");
 			if (file)
@@ -222,6 +201,7 @@ void SimpleWebServer::RespondWithFileOr404(String uri)
 				file.close();
 				return;
 			}
+			// logger.logf("File failed to open after finding it!");
 		}
 		logger.logf("File not found: %s", uri.c_str());
 	}
@@ -236,10 +216,11 @@ void SimpleWebServer::RespondWith404()
 	server->send(404, "text/plain; charset=utf-8", "File Not Found");
 }
 
-void SimpleWebServer::RespondWithContent(int responseCode, String response)
+void SimpleWebServer::RespondWithContent(int responseCode, String response, String fileType)
 {
+	String contentType = mime::getContentType(fileType);
 	setCommonHeaders();
-	server->send(responseCode, "text/plain; charset=utf-8", response);
+	server->send(responseCode, contentType, response);
 }
 
 void SimpleWebServer::Redirect(String uri)

@@ -4,7 +4,8 @@
 App::App(SplitflapTask &splitflapTask, DisplayTask &displayTask, Logger &logger) : clockTask(splitflapTask, logger),
 																				   simpleWebServer(logger),
 																				   network(displayTask, simpleWebServer, logger),
-																				   config(simpleWebServer, logger)
+																				   config(simpleWebServer, logger),
+																				   splitFlap(splitflapTask, logger)
 {
 }
 
@@ -21,25 +22,37 @@ void App::begin()
 
 	network.begin();
 
-	clockTask.begin();
-
 	config.begin();
 
-	// Add /logs endpoint to webserver
+	clockTask.begin();
+
+	splitFlap.begin();
+
+	registerHandlers();
+}
+
+void App::registerHandlers()
+{
+	// /logs endpoint
 	simpleWebServer.AddHandler("/logs", [this]()
 							   {
 		std::vector<std::string> logs = getRecentLogs();
 		String json = "[";
-		for (size_t i = 0; i < logs.size(); ++i) {
+		for (size_t i = 0; i < logs.size(); ++i)
+		{
 			// Escape quotes and backslashes for JSON
 			String logStr = String(logs[i].c_str());
 			logStr.replace("\\", "\\\\");
 			logStr.replace("\"", "\\\"");
 			json += "\"" + logStr + "\"";
-			if (i < logs.size() - 1) json += ",";
+			if (i < logs.size() - 1)
+				json += ",";
 		}
 		json += "]";
 		simpleWebServer.RespondWithContent(200, json); });
+
+	// SplitFlap related endpoints
+	splitFlap.registerHandlers(simpleWebServer);
 }
 
 void App::onLog(const std::string &msg)
