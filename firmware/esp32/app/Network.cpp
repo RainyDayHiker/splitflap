@@ -72,6 +72,7 @@ void Network::Setup()
 	WiFi.persistent(true);
 	WiFi.setAutoConnect(true);
 	WiFi.mode(WIFI_STA);
+
 	// Disable WiFi sleep as it causes glitches on pin 39;
 	// see https://github.com/espressif/arduino-esp32/issues/4903#issuecomment-793187707
 	WiFi.setSleep(WIFI_PS_NONE);
@@ -119,6 +120,10 @@ void Network::Setup()
 	webServer.AddHandler("/generate_204", std::bind(&Network::HandleWifiSetup, this));		  // Android wifi portal.
 	webServer.AddHandler("/fwlink", std::bind(&Network::HandleWifiSetup, this));			  // Microsoft wifi portal.
 	webServer.AddHandler("/hotspot-detect.html", std::bind(&Network::HandleWifiSetup, this)); // Apple wifi portal.
+
+	// Current board's wifi antenna seems to be a bit weak, so reduce transmit power slightly to improve stability
+	// Could consider adding an external antenna: https://www.youtube.com/watch?v=CFhwLVzeMFA
+	WiFi.setTxPower(WIFI_POWER_15dBm);
 }
 
 void Network::run()
