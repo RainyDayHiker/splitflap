@@ -123,7 +123,7 @@ void Network::Setup()
 
 	// Current board's wifi antenna seems to be a bit weak, so reduce transmit power slightly to improve stability
 	// Could consider adding an external antenna: https://www.youtube.com/watch?v=CFhwLVzeMFA
-	WiFi.setTxPower(WIFI_POWER_13dBm);
+	WiFi.setTxPower(WIFI_POWER_11dBm);
 }
 
 void Network::run()
