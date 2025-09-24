@@ -10,6 +10,7 @@
 		  href="setup.css">
 </head>
 
+
 <body>
 	<h1>Splitflap Home Setup</h1>
 	<div id="rangeInfo"></div>
@@ -19,7 +20,23 @@
 		<button id="testA">Set All A</button>
 		<button id="test1">Set All 1</button>
 		<button id="copyOffsets">Copy Offsets</button>
+		<button id="saveOffsets">Save Offsets</button>
 	</div>
+
+	<!-- Character picker overlay (copied from splitflap.html) -->
+	<div id="char-picker-overlay">
+		<div id="char-picker">
+			<div class="char-picker-header">
+				<h2>Pick Character</h2>
+			</div>
+			<div id="char-picker-grid"></div>
+			<div class="char-picker-actions">
+				<button id="char-picker-cancel"
+						class="char-picker-button">Cancel</button>
+			</div>
+		</div>
+	</div>
+
 	<script src="setup.js"></script>
 </body>
 

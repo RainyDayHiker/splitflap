@@ -51,4 +51,7 @@ private:
 
 	// Handler for POST /splitflap/set_offsets
 	void handleSetOffsets(SimpleWebServer &webServer);
+
+	// Handler for POST /splitflap/save_offsets
+	void handleSaveOffsets(SimpleWebServer &webServer);
 };

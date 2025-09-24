@@ -7,6 +7,9 @@ let offsetMaxExclusive = null; // steps_per_revolution
 
 function fetchState() {
 	fetch('/splitflap/state.json').then(r => r.json()).then(data => {
+		if (data && Array.isArray(data.flaps)) {
+			FLAP_CHARS = data.flaps;
+		}
 		modulesMeta = data.modules.map(m => ({
 			index: m.index,
 			flap_index: m.flap_index,
@@ -19,7 +22,7 @@ function fetchState() {
 		offsets = modulesMeta.map(m => m.offset);
 		offsetMin = (typeof data.offset_min === 'number') ? data.offset_min : 0;
 		offsetMaxExclusive = (typeof data.offset_max_exclusive === 'number') ? data.offset_max_exclusive : (data.steps_per_revolution || null);
-		numFlaps = data.num_flaps || 52;
+		numFlaps = data.num_flaps || (FLAP_CHARS.length > 0 ? FLAP_CHARS.length : 52);
 		updateRangeInfo();
 		renderGrid();
 	});
@@ -71,8 +74,74 @@ function renderGrid() {
 			offsets[i] = val;
 		};
 		cell.appendChild(input);
+
+		// Add "Pick Flap" button
+		const pickBtn = document.createElement('button');
+		pickBtn.textContent = 'Flap';
+		pickBtn.className = 'pick-flap-btn';
+		pickBtn.onclick = () => showFlapPicker(i);
+		cell.appendChild(pickBtn);
+
 		grid.appendChild(cell);
 	});
+}
+
+// --- Flap picker logic ---
+// Flap characters will be set from state.json
+
+let FLAP_CHARS = [];
+let pickerModuleIndex = null;
+
+function showFlapPicker(idx) {
+	const overlay = document.getElementById('char-picker-overlay');
+	const grid = document.getElementById('char-picker-grid');
+	const cancelBtn = document.getElementById('char-picker-cancel');
+	pickerModuleIndex = idx;
+	grid.innerHTML = '';
+	// Current flap index for this module
+	const currentFlapIdx = flapState[idx];
+	FLAP_CHARS.forEach((ch, flapIdx) => {
+		const btn = document.createElement('div');
+		btn.textContent = ch;
+		btn.className = 'char-option';
+		if (flapIdx === currentFlapIdx) btn.classList.add('current');
+		btn.onclick = (e) => {
+			e.stopPropagation();
+			closeFlapPicker();
+			handleFlapPicked(idx, flapIdx);
+		};
+		grid.appendChild(btn);
+	});
+	overlay.style.display = 'flex';
+	cancelBtn.onclick = closeFlapPicker;
+	overlay.onclick = (e) => {
+		if (e.target === overlay) closeFlapPicker();
+	};
+}
+
+function closeFlapPicker() {
+	const overlay = document.getElementById('char-picker-overlay');
+	overlay.style.display = 'none';
+	pickerModuleIndex = null;
+}
+
+function handleFlapPicked(idx, pickedFlapIdx) {
+	// Determine last set flap for this module (A or 1)
+	let lastFlapIdx = (flapState[idx] >= 0 && flapState[idx] < FLAP_CHARS.length) ? flapState[idx] : FLAP_CHARS.indexOf('A');
+	if (lastFlapIdx === -1) lastFlapIdx = FLAP_CHARS.indexOf('A');
+	if (lastFlapIdx === -1) lastFlapIdx = 0;
+
+	const stepsPerFlap = offsetMaxExclusive && numFlaps ? Math.round(offsetMaxExclusive / numFlaps) : 1;
+	const delta = (pickedFlapIdx - lastFlapIdx) * stepsPerFlap * -1; // Inverted direction
+	let newOffset = offsets[idx] + delta;
+
+	// Modulo-style rollover for offset
+	if (offsetMaxExclusive != null) {
+		const range = offsetMaxExclusive - offsetMin;
+		newOffset = ((newOffset - offsetMin) % range + range) % range + offsetMin;
+	}
+	offsets[idx] = newOffset;
+	renderGrid();
 }
 
 function changeOffset(idx, delta) {
@@ -99,7 +168,8 @@ document.getElementById('apply').onclick = function () {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
 		body
-	}).then(r => r.json ? r.json().catch(() => ({})) : Promise.resolve({})).then(fetchState);
+	}).then(r => r.json ? r.json().catch(() => ({})) : Promise.resolve({}))
+		.then(() => setTimeout(fetchState, 2000));
 };
 
 document.getElementById('testA').onclick = function () {
@@ -117,7 +187,8 @@ function setFlapState(str) {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
 		body
-	}).then(r => r.json ? r.json().catch(() => ({})) : Promise.resolve({})).then(fetchState);
+	}).then(r => r.json ? r.json().catch(() => ({})) : Promise.resolve({}))
+		.then(() => setTimeout(fetchState, 2000));
 }
 
 window.onload = fetchState;
@@ -147,4 +218,10 @@ document.getElementById('copyOffsets').onclick = function () {
 	} catch (e) {
 		console.error('Failed to build offsets clipboard content', e);
 	}
+};
+
+document.getElementById('saveOffsets').onclick = function () {
+	fetch('/splitflap/save_offsets', { method: 'POST' })
+		.then(() => alert('Offsets saved!'))
+		.catch(() => alert('Failed to save offsets.'));
 };

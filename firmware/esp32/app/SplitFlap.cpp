@@ -59,6 +59,10 @@ void SplitFlap::registerHandlers(SimpleWebServer &webServer)
 	// Set all offsets
 	webServer.AddHandler("/splitflap/set_home_offsets", HTTP_POST, [this, &webServer]()
 						 { handleSetOffsets(webServer); });
+
+	// Save all offsets
+	webServer.AddHandler("/splitflap/save_offsets", HTTP_POST, [this, &webServer]()
+						 { handleSaveOffsets(webServer); });
 }
 
 void SplitFlap::handleSetFlap(SimpleWebServer &webServer)
@@ -291,5 +295,15 @@ void SplitFlap::handleSetOffsets(SimpleWebServer &webServer)
 		}
 	}
 	splitFlap.restoreAllOffsets(offsets);
+	webServer.RespondWithContent(200, String("{\"ok\":true}"));
+}
+
+// Handler for POST /splitflap/save_offsets
+void SplitFlap::handleSaveOffsets(SimpleWebServer &webServer)
+{
+	// API: POST /splitflap/save_offsets
+	// No specific content required
+	// Response: {"ok":true} or {"error":"message"}
+	splitFlap.saveAllOffsets();
 	webServer.RespondWithContent(200, String("{\"ok\":true}"));
 }
