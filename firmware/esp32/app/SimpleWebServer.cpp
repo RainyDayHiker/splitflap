@@ -4,6 +4,7 @@
 #include <FS.h>
 #include <WiFi.h>
 #include <esp_wifi.h>
+#include <ElegantOTA.h>
 
 namespace mime
 {
@@ -104,6 +105,8 @@ bool SimpleWebServer::Start(std::function<bool(String)> handleCaptivePortal)
 
 	// Set up routes
 	server->onNotFound(std::bind(&SimpleWebServer::HandlePath, this));
+
+	SetupOTA();
 
 	// Diagnostics endpoints (plaintext / simple JSON-like output)
 	server->on("/diagnostics/heap", std::bind(&SimpleWebServer::HandleHeapDiagnostics, this));
@@ -245,6 +248,9 @@ void SimpleWebServer::run()
 		uint32_t hcStart = micros();
 		if (server != nullptr)
 		{
+			// Handle ElegantOTA updates
+			ElegantOTA.loop();
+
 			server->handleClient();
 			uint32_t hcElapsed = micros() - hcStart;
 			handleClientMicrosAcc += hcElapsed;
@@ -382,4 +388,54 @@ void SimpleWebServer::HandleNetworkDiagnostics()
 	out += "\"\n";
 	out += "}\n";
 	RespondWithContent(200, out, ".json");
+}
+
+void SimpleWebServer::onOTAStart()
+{
+	logger.log("OTA update process started.");
+}
+
+void SimpleWebServer::onOTAProgress(size_t current, size_t final)
+{
+	static size_t lastLogged = 0;
+	// Log every 50KB to reduce log spam
+	if (current - lastLogged >= 51200 || current == final)
+	{
+		logger.logf("OTA Progress: %u bytes", current);
+		lastLogged = current;
+	}
+}
+
+void SimpleWebServer::onOTAEnd(bool success)
+{
+	if (success)
+		logger.log("OTA update completed successfully. Rebooting...");
+	else
+		logger.log("OTA update failed.");
+}
+
+void SimpleWebServer::SetupOTA()
+{
+#ifndef OTA_USERNAME
+#error "OTA_USERNAME is not defined. Please define OTA_USERNAME and OTA_PASSWORD in the .env file."
+#endif
+#ifndef OTA_PASSWORD
+#error "OTA_PASSWORD is not defined. Please define OTA_USERNAME and OTA_PASSWORD in the .env file."
+#endif
+
+	// Block access to /update - support only via direct scripts
+	server->on("/update", HTTP_GET, [this]()
+			   { server->send(403, "text/plain", "Access Denied. OTA updates disabled via web interface."); });
+
+	// Initialize ElegantOTA - web-based OTA updates with authentication
+	// Note: The webpage won't be accessible because our handler above takes precedence
+	ElegantOTA.begin(server, OTA_USERNAME, OTA_PASSWORD);
+	ElegantOTA.setAutoReboot(true);
+	ElegantOTA.onStart([this]()
+					   { onOTAStart(); });
+	ElegantOTA.onProgress([this](size_t current, size_t total)
+						  { onOTAProgress(current, total); });
+	ElegantOTA.onEnd([this](bool success)
+					 { onOTAEnd(success); });
+	logger.logf("ElegantOTA enabled at /update for web-based firmware and LittleFS updates");
 }

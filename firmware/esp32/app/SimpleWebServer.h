@@ -29,6 +29,8 @@ public:
 	void RespondWithContent(int responseCode, String response, String fileType = ".txt");
 	void Redirect(String uri);
 
+	void SetupOTA();
+
 protected:
 	void run();
 
@@ -41,8 +43,12 @@ private:
 	void HandleSystemDiagnostics();
 	void HandleNetworkDiagnostics();
 
-	// Internal perf counters (updated in run loop)
-	volatile uint32_t loopCount = 0;			 // Loops counted within current 1s window
+	void onOTAStart();
+	void onOTAProgress(size_t current, size_t final);
+	void onOTAEnd(bool success);
+
+		// Internal perf counters (updated in run loop)
+		volatile uint32_t loopCount = 0;		 // Loops counted within current 1s window
 	volatile uint32_t loopsPerSecond = 0;		 // Last computed loops/sec
 	volatile uint32_t handleClientCalls = 0;	 // Number of handleClient() calls in window
 	volatile uint32_t handleClientMicrosAcc = 0; // Accumulated time spent in handleClient in microseconds (window)
