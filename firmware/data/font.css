@@ -6,15 +6,8 @@
 	font-style: normal;
 }
 
-@font-face {
-	font-family: 'NotoEmoji';
-	src: url('NotoEmoji-Regular.ttf') format('truetype');
-	font-weight: normal;
-	font-style: normal;
-}
-
 .flap-emoji {
-	font-family: 'NotoEmoji', 'Instruction', Arial, sans-serif;
+	font-family: 'Noto Emoji', 'Instruction', Arial, sans-serif;
 }
 
 .flap-instruction {
