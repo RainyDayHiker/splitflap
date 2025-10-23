@@ -5,7 +5,8 @@ App::App(SplitflapTask &splitflapTask, DisplayTask &displayTask, Logger &logger)
 																				   simpleWebServer(logger),
 																				   network(displayTask, simpleWebServer, logger),
 																				   config(simpleWebServer, logger),
-																				   splitFlap(splitflapTask, logger)
+																				   splitFlap(splitflapTask, logger),
+																				   splitFlapComposer(splitflapTask, logger)
 {
 }
 
@@ -27,6 +28,8 @@ void App::begin()
 	clockTask.begin();
 
 	splitFlap.begin();
+
+	splitFlapComposer.begin();
 
 	registerHandlers();
 }

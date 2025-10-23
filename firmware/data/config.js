@@ -29,6 +29,16 @@ async function getStatus() {
 		if ('AutoStatusUpdates' in config) {
 			document.getElementById('autoStatusUpdates').checked = !!config.AutoStatusUpdates;
 		}
+
+		// Set MQTT broker
+		if ('MqttBroker' in config) {
+			document.getElementById('mqttBroker').value = config.MqttBroker;
+		}
+
+		// Set MQTT port
+		if ('MqttPort' in config) {
+			document.getElementById('mqttPort').value = config.MqttPort;
+		}
 	} catch (e) {
 		// Optionally handle error
 	}
@@ -98,4 +108,18 @@ function isValidTime(hour, minute) {
 function autoStatusUpdatesChanged(element) {
 	const enabled = element.checked ? 1 : 0;
 	sendPropertyChange("autoStatusUpdates=" + enabled);
+}
+
+function mqttBrokerChanged(element) {
+	if (!element.value) return;
+	sendPropertyChange("mqttBroker=" + encodeURIComponent(element.value));
+}
+
+function mqttPortChanged(element) {
+	const port = parseInt(element.value, 10);
+
+	// Validate port range
+	if (isNaN(port) || port < 1 || port > 65535) return;
+
+	sendPropertyChange("mqttPort=" + port);
 }

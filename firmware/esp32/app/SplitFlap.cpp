@@ -174,6 +174,7 @@ String SplitFlap::buildStateJson()
 	serializeJson(doc, json);
 	return json;
 }
+
 // Handler for POST /splitflap/set_flap_state
 void SplitFlap::handleSetFlapState(SimpleWebServer &webServer)
 {

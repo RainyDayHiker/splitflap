@@ -6,6 +6,7 @@
 #include "Config.h"
 #include "Log.h"
 #include "SplitFlap.h"
+#include "SplitFlapComposer.h"
 
 class App : public Log
 {
@@ -23,8 +24,8 @@ private:
 	SimpleWebServer simpleWebServer;
 	Network network;
 	Config config;
-	SplitFlap splitFlap; 
-
+	SplitFlap splitFlap;
+	SplitFlapComposer splitFlapComposer;
 
 	void registerHandlers();
 

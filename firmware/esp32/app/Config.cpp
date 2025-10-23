@@ -22,6 +22,8 @@ Config::Config(SimpleWebServer &webServer, Logger &logger) : Task("Config", 8192
 	_quietTimeEndHour = 7;
 	_quietTimeEndMinute = 0;
 	_autoStatusUpdatesEnabled = true;
+	_mqttBroker = "mqtt.local";
+	_mqttPort = 1883;
 }
 
 void Config::Setup()
@@ -137,6 +139,20 @@ bool Config::ProcessSetProperties()
 		processedSomething |= SetAutoStatusUpdatesEnabled(val != 0);
 	}
 
+	// Handle MQTT broker setting
+	String mqttBroker;
+	if (webServer.GetRequestArg("mqttBroker", mqttBroker))
+	{
+		processedSomething |= SetMqttBroker(mqttBroker);
+	}
+
+	// Handle MQTT port setting
+	String mqttPort;
+	if (webServer.GetRequestArg("mqttPort", mqttPort))
+	{
+		processedSomething |= SetMqttPort(mqttPort.toInt());
+	}
+
 	return processedSomething;
 }
 
@@ -157,6 +173,14 @@ void Config::Load(JsonDocument *doc)
 	// Load auto status updates
 	if (docRef["AutoStatusUpdates"].is<bool>())
 		SetAutoStatusUpdatesEnabled((bool)docRef["AutoStatusUpdates"]);
+
+	// Load MQTT broker
+	if (docRef["MqttBroker"].is<const char *>())
+		SetMqttBroker(docRef["MqttBroker"].as<const char *>());
+
+	// Load MQTT port
+	if (docRef["MqttPort"].is<int>())
+		SetMqttPort(docRef["MqttPort"]);
 }
 
 void Config::Save(JsonDocument *doc)
@@ -174,6 +198,10 @@ void Config::Save(JsonDocument *doc)
 
 	// Save auto status updates setting
 	docRef["AutoStatusUpdates"] = _autoStatusUpdatesEnabled;
+
+	// Save MQTT settings
+	docRef["MqttBroker"] = _mqttBroker;
+	docRef["MqttPort"] = _mqttPort;
 }
 
 bool Config::SetTimeZone(LocalTime::TimeZone tzNew)
@@ -288,6 +316,40 @@ bool Config::SetAutoStatusUpdatesEnabled(bool enabled)
 	if (fVerboseLog)
 		logger.logf("Config: Setting auto status updates to %s", enabled ? "enabled" : "disabled");
 	_autoStatusUpdatesEnabled = enabled;
+	_dirty = true;
+	return true;
+}
+
+bool Config::SetMqttBroker(const String &broker)
+{
+	if (_mqttBroker == broker)
+		return false;
+
+	if (fVerboseLog)
+		logger.logf("Config: Setting MQTT broker to %s", broker.c_str());
+
+	_mqttBroker = broker;
+	_dirty = true;
+	return true;
+}
+
+bool Config::SetMqttPort(int port)
+{
+	if (_mqttPort == port)
+		return false;
+
+	// Validate port range
+	if (port < 1 || port > 65535)
+	{
+		if (fVerboseLog)
+			logger.logf("Config: Invalid MQTT port %d", port);
+		return false;
+	}
+
+	if (fVerboseLog)
+		logger.logf("Config: Setting MQTT port to %d", port);
+
+	_mqttPort = port;
 	_dirty = true;
 	return true;
 }

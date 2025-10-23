@@ -69,6 +69,32 @@
 			</td>
 		</tr>
 
+		<tr>
+			<td class="textColumn"> MQTT Broker: </td>
+			<td>
+				<input type="text"
+					   title="MQTT Broker"
+					   id="mqttBroker"
+					   class="common_width"
+					   placeholder="mqtt.local"
+					   onchange="mqttBrokerChanged(this)">
+			</td>
+		</tr>
+
+		<tr>
+			<td class="textColumn"> MQTT Port: </td>
+			<td>
+				<input type="number"
+					   title="MQTT Port"
+					   id="mqttPort"
+					   class="common_width"
+					   min="1"
+					   max="65535"
+					   placeholder="1883"
+					   onchange="mqttPortChanged(this)">
+			</td>
+		</tr>
+
 	</table>
 
 	<br />

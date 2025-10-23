@@ -45,6 +45,8 @@ private:
 	int _quietTimeEndHour;
 	int _quietTimeEndMinute;
 	bool _autoStatusUpdatesEnabled;
+	String _mqttBroker;
+	int _mqttPort;
 
 public:
 	LocalTime::TimeZone GetTimeZone() { return _tz; }
@@ -64,4 +66,11 @@ public:
 	// Auto status updates
 	bool GetAutoStatusUpdatesEnabled() const { return _autoStatusUpdatesEnabled; }
 	bool SetAutoStatusUpdatesEnabled(bool enabled);
+
+	// MQTT settings
+	String GetMqttBroker() const { return _mqttBroker; }
+	bool SetMqttBroker(const String &broker);
+
+	int GetMqttPort() const { return _mqttPort; }
+	bool SetMqttPort(int port);
 };
