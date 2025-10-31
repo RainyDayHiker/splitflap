@@ -2,10 +2,11 @@
 #include <ArduinoJson.h>
 #include "LocalTime.h"
 #include "Config.h"
+#include "SplitFlap.h"
 
-SplitFlapComposer::SplitFlapComposer(SplitflapTask &splitflapTask, Logger &logger, const uint8_t task_core)
+SplitFlapComposer::SplitFlapComposer(SplitFlap &splitFlap, Logger &logger, const uint8_t task_core)
 	: Task("SplitFlapComposer", 8192, 1, task_core),
-	  splitFlap(splitflapTask),
+	  splitFlap(splitFlap),
 	  logger(logger),
 	  _latestHandicap(""),
 	  _latestTemperature(""),
@@ -65,6 +66,19 @@ void SplitFlapComposer::run()
 				{
 					PublishComposedMessage();
 				}
+			}
+		}
+
+		// Test section.  Wait 5 seconds after starting then post a test message
+		static bool testMessageSent = false;
+		if (!testMessageSent)
+		{
+			static unsigned long startTime = millis();
+			if (millis() - startTime > 5000)
+			{
+				if (Config::GetInstance()->GetAutoStatusUpdatesEnabled())
+					splitFlap.SetDisplayMessage("ABCDEFGHIJKLMNOPQRSTUVWXYZ");
+				testMessageSent = true;
 			}
 		}
 

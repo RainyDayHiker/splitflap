@@ -33,6 +33,8 @@ public:
 	// Register web handlers related to splitflap operations
 	void registerHandlers(SimpleWebServer &webServer);
 
+	void SetDisplayMessage(const String &message);
+
 protected:
 	void run();
 

@@ -65,6 +65,25 @@ void SplitFlap::registerHandlers(SimpleWebServer &webServer)
 						 { handleSaveOffsets(webServer); });
 }
 
+void SplitFlap::SetDisplayMessage(const String &message)
+{
+	// Message needs to be converted for display
+	// - First 12 characters of the message are mapped to the positions 24-13 in the display
+	// - Remaining characters of the message are mapped to the positions 1-12 in the display
+	// - Trim extra characters
+	// - Pad with spaces if shorter than 24 characters
+	char buf[NUM_MODULES + 1];
+	uint8_t msgLen = message.length();
+	for (uint8_t i = 0; i < NUM_MODULES; i++)
+	{
+		uint8_t bufIndex = (i < 12) ? (23 - i) : (i - 12);
+		buf[bufIndex] = (i < msgLen) ? message[i] : ' ';
+	}
+	buf[NUM_MODULES] = '\0';
+
+	splitFlap.showString(buf, NUM_MODULES, false);
+}
+
 void SplitFlap::handleSetFlap(SimpleWebServer &webServer)
 {
 	// API: POST /splitflap/set_flap

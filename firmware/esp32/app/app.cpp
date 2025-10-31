@@ -6,7 +6,7 @@ App::App(SplitflapTask &splitflapTask, DisplayTask &displayTask, Logger &logger)
 																				   network(displayTask, simpleWebServer, logger),
 																				   config(simpleWebServer, logger),
 																				   splitFlap(splitflapTask, logger),
-																				   splitFlapComposer(splitflapTask, logger)
+																				   splitFlapComposer(splitFlap, logger)
 {
 }
 

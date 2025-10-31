@@ -5,35 +5,25 @@
 #include <Arduino.h>
 
 #include "../core/logger.h"
-#include "../core/splitflap_task.h"
 #include "../core/task.h"
 
 class SimpleWebServer; // Forward declaration
+class SplitFlap;
 
 class SplitFlapComposer : public Task<SplitFlapComposer>
 {
 	friend class Task<SplitFlapComposer>; // Allow base Task to invoke protected run()
 
 public:
-	SplitFlapComposer(SplitflapTask &splitFlapTask, Logger &logger, const uint8_t task_core = 0);
-
-	// Register web handlers related to splitflap operations
-	void registerHandlers(SimpleWebServer &webServer);
+	SplitFlapComposer(SplitFlap &splitFlap, Logger &logger, const uint8_t task_core = 0);
 
 protected:
 	void run();
 
 private:
-	SplitflapTask &splitFlap;
+	SplitFlap &splitFlap;
 	Logger &logger;
 
-public:
-	SplitFlapComposer();
-
-	void Setup();
-
-	// Public methods for external message forwarding (e.g., from MqttListener)
-	// These allow the composer to work standalone or receive messages from another component
 	void OnHandicapMessage(const char *topic, const char *payload);
 	void OnWeatherMessage(const char *topic, const char *payload);
 	void OnCustomMessage(const char *topic, const char *payload);
