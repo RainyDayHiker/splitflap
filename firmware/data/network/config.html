@@ -5,46 +5,76 @@
 	<meta charset="UTF-8" />
 	<meta name="viewport"
 		  content="width=device-width, initial-scale=1" />
-	<title>Wifi Configuration</title>
+	<title>Splitflap - WiFi Configuration</title>
 	<link rel="stylesheet"
-		  href="config.css" />
+		  href="../splitflap-theme.css" />
 	<script src="config.js"></script>
 </head>
 
 <body>
-	<form method="get"
-		  action="network_update">
-		<div class="settings-row">
-			<label for="ssid">Wifi Network: </label>
-		</div>
-		<div class="settings-row">
-			<input name="ssid"
-				   length="32"
-				   type="text"
-				   id="ssid"
-				   required>
-		</div>
-		<div class="settings-row">
-			<label for="pass">Wifi Password: </label>
-		</div>
-		<div class="settings-row">
-			<input name="pass"
-				   length="64"
-				   type="text"
-				   id="pass">
-		</div>
-		<div class="settings-row">
-			<input type="submit"
-				   value="Connect">
-		</div>
-	</form>
+	<div class="container">
+		<header>
+			<h1>📶 Splitflap - WiFi Configuration</h1>
+			<p>Connect your splitflap display to a wireless network</p>
+		</header>
 
-	<div>
-		<label id="network_list_status"></label>
-		<table id="network_list">
-		</table>
-		<br/>
-		<a href="/">Main page</a>
+		<main>
+			<div class="card">
+				<h2>Connect to WiFi Network</h2>
+				<form method="get"
+					  action="network_update">
+					<div class="form-group">
+						<label for="ssid">WiFi Network Name (SSID):</label>
+						<input name="ssid"
+							   length="32"
+							   type="text"
+							   id="ssid"
+							   class="form-control"
+							   placeholder="Enter network name"
+							   required>
+					</div>
+
+					<div class="form-group">
+						<label for="pass">WiFi Password:</label>
+						<input name="pass"
+							   length="64"
+							   type="password"
+							   id="pass"
+							   class="form-control"
+							   autocomplete="current-password"
+							   placeholder="Enter network password (leave blank for open networks)">
+					</div>
+					<div class="form-group">
+						<input type="submit"
+							   value="🔗 Connect to Network"
+							   class="btn btn-success">
+					</div>
+				</form>
+			</div>
+
+			<div class="card">
+				<h2>Available Networks</h2>
+				<div id="network_list_status"
+					 class="loading">Scanning for networks...</div>
+				<table id="network_list"
+					   class="network-list">
+				</table>
+			</div>
+
+			<div class="card">
+				<h2>Quick Navigation</h2>
+				<div class="nav-links">
+					<a href="/index.html"
+					   class="btn">🏠 Main Page</a>
+					<a href="/config.html"
+					   class="btn btn-secondary">⚙️ Configuration</a>
+				</div>
+			</div>
+		</main>
+
+		<footer>
+			<p>Splitflap WiFi Configuration | Select a network above or enter credentials manually</p>
+		</footer>
 	</div>
 </body>
 

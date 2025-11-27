@@ -45,6 +45,7 @@ private:
 	int _quietTimeEndHour;
 	int _quietTimeEndMinute;
 	bool _autoStatusUpdatesEnabled;
+	bool _mqttEnabled;
 	String _mqttBroker;
 	int _mqttPort;
 
@@ -68,6 +69,8 @@ public:
 	bool SetAutoStatusUpdatesEnabled(bool enabled);
 
 	// MQTT settings
+	bool GetMqttEnabled() const { return _mqttEnabled; }
+	bool SetMqttEnabled(bool enabled);
 	String GetMqttBroker() const { return _mqttBroker; }
 	bool SetMqttBroker(const String &broker);
 

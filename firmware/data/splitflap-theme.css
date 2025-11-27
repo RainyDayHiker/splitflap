@@ -1,0 +1,365 @@
+/* House IoT Shared Theme CSS */
+
+* {
+	margin: 0;
+	padding: 0;
+	box-sizing: border-box;
+}
+
+body {
+	font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+	background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+	min-height: 100vh;
+	color: #333;
+	line-height: 1.6;
+}
+
+.container {
+	max-width: 1200px;
+	margin: 0 auto;
+	padding: 20px;
+}
+
+/* Header Styles */
+header {
+	background: rgba(255, 255, 255, 0.95);
+	border-radius: 10px;
+	padding: 20px;
+	margin-bottom: 20px;
+	box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+	-webkit-backdrop-filter: blur(10px);
+	backdrop-filter: blur(10px);
+	text-align: center;
+}
+
+header h1 {
+	color: #2c3e50;
+	margin-bottom: 10px;
+	font-size: 1.8em;
+}
+
+header p {
+	color: #666;
+	font-size: 0.9em;
+}
+
+/* Main Content Card */
+.card {
+	background: rgba(255, 255, 255, 0.95);
+	border-radius: 10px;
+	padding: 25px;
+	margin-bottom: 20px;
+	box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+	-webkit-backdrop-filter: blur(10px);
+	backdrop-filter: blur(10px);
+}
+
+.card h2 {
+	color: #2c3e50;
+	margin-bottom: 20px;
+	font-size: 1.4em;
+	border-bottom: 2px solid #3498db;
+	padding-bottom: 10px;
+}
+
+/* Button Styles */
+.btn {
+	background: linear-gradient(135deg, #3498db, #2980b9);
+	color: white;
+	border: none;
+	border-radius: 8px;
+	padding: 12px 24px;
+	cursor: pointer;
+	font-size: 14px;
+	font-weight: 600;
+	transition: all 0.3s ease;
+	text-decoration: none;
+	display: inline-block;
+	margin: 5px;
+	box-shadow: 0 2px 8px rgba(52, 152, 219, 0.2);
+	border: 1px solid rgba(52, 152, 219, 0.3);
+}
+
+.btn:hover {
+	background: linear-gradient(135deg, #2980b9, #1f5f7f);
+	transform: translateY(-2px);
+	box-shadow: 0 4px 15px rgba(52, 152, 219, 0.4);
+	color: white;
+	text-decoration: none;
+}
+
+.btn-secondary {
+	background: linear-gradient(135deg, #95a5a6, #7f8c8d);
+	border: 1px solid rgba(149, 165, 166, 0.3);
+}
+
+.btn-secondary:hover {
+	background: linear-gradient(135deg, #7f8c8d, #6c7b7d);
+	box-shadow: 0 4px 15px rgba(149, 165, 166, 0.4);
+}
+
+.btn-success {
+	background: linear-gradient(135deg, #27ae60, #219a52);
+	border: 1px solid rgba(39, 174, 96, 0.3);
+}
+
+.btn-success:hover {
+	background: linear-gradient(135deg, #219a52, #1e8449);
+	box-shadow: 0 4px 15px rgba(39, 174, 96, 0.4);
+}
+
+/* Form Styles */
+.form-group {
+	margin-bottom: 20px;
+}
+
+.form-group label {
+	display: block;
+	margin-bottom: 8px;
+	font-weight: 600;
+	color: #555;
+}
+
+.form-control {
+	width: 100%;
+	padding: 12px 15px;
+	border: 2px solid #ddd;
+	border-radius: 8px;
+	font-size: 14px;
+	transition: all 0.3s ease;
+	background: rgba(255, 255, 255, 0.9);
+}
+
+.form-control:focus {
+	outline: none;
+	border-color: #3498db;
+	box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+}
+
+select.form-control {
+	cursor: pointer;
+}
+
+/* Table Styles */
+.info-table {
+	width: 100%;
+	border-collapse: collapse;
+	margin-bottom: 20px;
+}
+
+.info-table td {
+	padding: 12px 15px;
+	border-bottom: 1px solid #eee;
+}
+
+.info-table .label-col {
+	font-weight: 600;
+	color: #555;
+	width: 40%;
+	background: rgba(52, 152, 219, 0.05);
+}
+
+.info-table .value-col {
+	color: #333;
+	font-family: 'Courier New', monospace;
+}
+
+/* Status Indicators */
+.status-indicator {
+	display: inline-block;
+	padding: 6px 12px;
+	border-radius: 20px;
+	font-size: 12px;
+	font-weight: 600;
+	text-transform: uppercase;
+}
+
+.status-online {
+	background: rgba(39, 174, 96, 0.1);
+	color: #27ae60;
+	border: 1px solid rgba(39, 174, 96, 0.3);
+}
+
+.status-offline {
+	background: rgba(231, 76, 60, 0.1);
+	color: #e74c3c;
+	border: 1px solid rgba(231, 76, 60, 0.3);
+}
+
+.status-warning {
+	background: rgba(241, 196, 15, 0.1);
+	color: #f39c12;
+	border: 1px solid rgba(241, 196, 15, 0.3);
+}
+
+/* Navigation Links */
+.nav-links {
+	text-align: center;
+	margin-top: 20px;
+}
+
+.nav-links a {
+	color: #3498db;
+	text-decoration: none;
+	margin: 0 15px;
+	font-weight: 500;
+	transition: color 0.3s ease;
+}
+
+.nav-links a:hover {
+	color: #2980b9;
+	text-decoration: underline;
+}
+
+/* Ensure button styles override nav-links for elements with .btn class */
+.nav-links a.btn {
+	background: linear-gradient(135deg, #3498db, #2980b9);
+	color: white !important;
+	text-decoration: none !important;
+	border-radius: 8px;
+	padding: 12px 24px;
+	font-size: 14px;
+	font-weight: 600;
+	display: inline-block;
+	margin: 5px;
+	transition: all 0.3s ease;
+	box-shadow: 0 2px 8px rgba(52, 152, 219, 0.2);
+}
+
+.nav-links a.btn:hover {
+	background: linear-gradient(135deg, #2980b9, #1f5f7f);
+	transform: translateY(-2px);
+	box-shadow: 0 4px 15px rgba(52, 152, 219, 0.4);
+	color: white !important;
+	text-decoration: none !important;
+}
+
+.nav-links a.btn-secondary {
+	background: linear-gradient(135deg, #95a5a6, #7f8c8d);
+}
+
+.nav-links a.btn-secondary:hover {
+	background: linear-gradient(135deg, #7f8c8d, #6c7b7d);
+}
+
+.nav-links a.btn-success {
+	background: linear-gradient(135deg, #27ae60, #219a52);
+}
+
+.nav-links a.btn-success:hover {
+	background: linear-gradient(135deg, #219a52, #1e8449);
+}
+
+/* Loading and Message Styles */
+.loading {
+	text-align: center;
+	color: #666;
+	font-style: italic;
+	padding: 20px;
+}
+
+.message {
+	padding: 15px;
+	border-radius: 8px;
+	margin-bottom: 20px;
+}
+
+.message.success {
+	background: rgba(39, 174, 96, 0.1);
+	color: #27ae60;
+	border: 1px solid rgba(39, 174, 96, 0.3);
+}
+
+.message.error {
+	background: rgba(231, 76, 60, 0.1);
+	color: #e74c3c;
+	border: 1px solid rgba(231, 76, 60, 0.3);
+}
+
+.message.info {
+	background: rgba(52, 152, 219, 0.1);
+	color: #3498db;
+	border: 1px solid rgba(52, 152, 219, 0.3);
+}
+
+/* Update Status Message */
+.update-status {
+	margin-top: 1rem;
+	padding: 0.5rem;
+	display: none;
+}
+
+/* Network List Styles */
+.network-list {
+	width: 100%;
+	border-collapse: collapse;
+}
+
+.network-list td {
+	padding: 10px;
+	border-bottom: 1px solid #eee;
+	cursor: pointer;
+	transition: background-color 0.3s ease;
+}
+
+.network-list .network-name {
+	color: #3498db;
+	font-weight: 500;
+}
+
+.network-list tr:hover {
+	background: rgba(52, 152, 219, 0.05);
+}
+
+/* Footer */
+footer {
+	text-align: center;
+	padding: 20px;
+	color: rgba(255, 255, 255, 0.7);
+	font-size: 0.9em;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+	.container {
+		padding: 15px;
+	}
+
+	header h1 {
+		font-size: 1.5em;
+	}
+
+	.card {
+		padding: 20px;
+	}
+
+	.btn {
+		padding: 10px 20px;
+		font-size: 13px;
+	}
+}
+
+@media (max-width: 480px) {
+	.container {
+		padding: 10px;
+	}
+
+	header {
+		padding: 15px;
+	}
+
+	.card {
+		padding: 15px;
+	}
+
+	.info-table .label-col {
+		width: 100%;
+		display: block;
+	}
+
+	.info-table .value-col {
+		width: 100%;
+		display: block;
+		padding-top: 5px;
+	}
+}

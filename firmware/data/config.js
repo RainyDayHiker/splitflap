@@ -30,6 +30,11 @@ async function getStatus() {
 			document.getElementById('autoStatusUpdates').checked = !!config.AutoStatusUpdates;
 		}
 
+		// Set MQTT enabled checkbox
+		if ('MqttEnabled' in config) {
+			document.getElementById('mqttEnabled').checked = !!config.MqttEnabled;
+		}
+
 		// Set MQTT broker
 		if ('MqttBroker' in config) {
 			document.getElementById('mqttBroker').value = config.MqttBroker;
@@ -108,6 +113,11 @@ function isValidTime(hour, minute) {
 function autoStatusUpdatesChanged(element) {
 	const enabled = element.checked ? 1 : 0;
 	sendPropertyChange("autoStatusUpdates=" + enabled);
+}
+
+function mqttEnabledChanged(element) {
+	const enabled = element.checked ? 1 : 0;
+	sendPropertyChange("mqttEnabled=" + enabled);
 }
 
 function mqttBrokerChanged(element) {

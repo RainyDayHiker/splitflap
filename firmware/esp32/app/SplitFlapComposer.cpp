@@ -39,19 +39,30 @@ void SplitFlapComposer::run()
 {
 	while (1)
 	{
-		// Check for MQTT configuration changes
-		if (_mqttClient.host != Config::GetInstance()->GetMqttBroker() || _mqttClient.port != Config::GetInstance()->GetMqttPort())
+		// Check if MQTT is enabled
+		if (Config::GetInstance()->GetMqttEnabled())
 		{
-			logger.log("MQTT configuration changed, reconnecting...");
+			// Check for MQTT configuration changes
+			if (_mqttClient.host != Config::GetInstance()->GetMqttBroker() || _mqttClient.port != Config::GetInstance()->GetMqttPort())
+			{
+				logger.log("MQTT configuration changed, reconnecting...");
 
-			_mqttClient.host = Config::GetInstance()->GetMqttBroker();
-			_mqttClient.port = Config::GetInstance()->GetMqttPort();
-			_mqttClient.disconnect();
+				_mqttClient.host = Config::GetInstance()->GetMqttBroker();
+				_mqttClient.port = Config::GetInstance()->GetMqttPort();
+				_mqttClient.disconnect();
+			}
+
+			_mqttClient.loop(); // Process MQTT messages
 		}
-
-		_mqttClient.loop(); // Process MQTT messages
-
-		// Check if temporary message has expired
+		else
+		{
+			// If MQTT is disabled, disconnect if currently connected
+			if (_mqttClient.connected())
+			{
+				logger.log("MQTT disabled, disconnecting...");
+				_mqttClient.disconnect();
+			}
+		} // Check if temporary message has expired
 		if (_hasTemporaryMessage)
 		{
 			time_t now = LocalTime::GetCurrentTime(nullptr);

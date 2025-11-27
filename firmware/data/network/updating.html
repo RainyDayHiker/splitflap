@@ -5,7 +5,9 @@
 	<meta charset="UTF-8" />
 	<meta name="viewport"
 		  content="width=device-width, initial-scale=1" />
-	<title>Wifi Updating</title>
+	<title>Splitflap - Connecting to Network</title>
+	<link rel="stylesheet"
+		  href="../splitflap-theme.css" />
 </head>
 
 <script type="text/javascript">
@@ -16,8 +18,47 @@
 </script>
 
 <body>
-	Attempting to connect to the new network. Will attempt to navigate to the home page in 10 seconds or you can <a
-	   href="/">click here</a>.
+	<div class="container">
+		<header>
+			<h1>🔄 Splitflap - Connecting to Network</h1>
+			<p>Please wait while we connect to your WiFi network</p>
+		</header>
+
+		<main>
+			<div class="card">
+				<h2>Connection in Progress</h2>
+				<div class="message info">
+					<p>🔗 Attempting to connect to the new WiFi network...</p>
+					<p>⏱️ This process may take up to 30 seconds.</p>
+				</div>
+
+				<div class="loading">
+					<p>Please wait while the device connects to your network.</p>
+					<p><strong>Automatic redirect in 10 seconds</strong></p>
+				</div>
+			</div>
+
+			<div class="card">
+				<h2>What happens next?</h2>
+				<div class="message success">
+					<p>✅ If the connection is successful, you'll be redirected to the main page automatically.</p>
+					<p>⚠️ If the connection fails, the device will return to its previous network configuration.</p>
+					<p>🔧 You can manually return to the <a href="config.html">WiFi configuration</a> if needed.</p>
+				</div>
+
+				<div class="nav-links">
+					<a href="/"
+					   class="btn">🏠 Go to Main Page Now</a>
+					<a href="config.html"
+					   class="btn btn-secondary">📶 WiFi Settings</a>
+				</div>
+			</div>
+		</main>
+
+		<footer>
+			<p>Splitflap Network Connection | Automatic redirect in progress</p>
+		</footer>
+	</div>
 </body>
 
 </html>

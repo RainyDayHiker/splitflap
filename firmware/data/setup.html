@@ -5,25 +5,62 @@
 	<meta charset="UTF-8">
 	<meta name="viewport"
 		  content="width=device-width, initial-scale=1">
-	<title>Splitflap Home Setup</title>
+	<title>Splitflap - Home Setup</title>
+	<link rel="stylesheet"
+		  href="splitflap-theme.css">
 	<link rel="stylesheet"
 		  href="setup.css">
 </head>
 
 
 <body>
-	<h1>Splitflap Home Setup</h1>
-	<div>Usage: Put any value to start for a flap. Apply Changes to get it to home. Set all to either A or 1. Then click
-		the flap button and pick the flap showing. Apply Changes. Tweak value to get perfect. Copy offsets to put in
-		code or Save offsets to commit them to memory.</div>
-	<div id="rangeInfo"></div>
-	<div id="grid"></div>
-	<div id="controls">
-		<button id="apply">Apply Changes</button>
-		<button id="testA">Set All A</button>
-		<button id="test1">Set All 1</button>
-		<button id="copyOffsets">Copy Offsets</button>
-		<button id="saveOffsets">Save Offsets</button>
+	<div class="container">
+		<header>
+			<h1>🔧 Splitflap Home Setup</h1>
+			<p>Configure flap home positions and offsets</p>
+		</header>
+
+		<main>
+			<div class="card">
+				<h2>Setup Instructions</h2>
+				<div class="setup-instructions">
+					<p>Usage: Put any value to start for a flap. Apply Changes to get it to home. Set all to either A or
+						1.
+						Then click the flap button and pick the flap showing. Apply Changes. Tweak value to get perfect.
+						Copy offsets to put in code or Save offsets to commit them to memory.</p>
+				</div>
+				<div id="rangeInfo"></div>
+			</div>
+
+			<div class="card">
+				<h2>Flap Configuration</h2>
+				<div id="grid"></div>
+				<div id="controls">
+					<button id="apply"
+							class="btn">Apply Changes</button>
+					<button id="testA"
+							class="btn btn-secondary">Set All A</button>
+					<button id="test1"
+							class="btn btn-secondary">Set All 1</button>
+					<button id="copyOffsets"
+							class="btn btn-success">Copy Offsets</button>
+					<button id="saveOffsets"
+							class="btn btn-success">Save Offsets</button>
+				</div>
+			</div>
+
+			<div class="card">
+				<h2>Navigation</h2>
+				<div class="nav-links">
+					<a href="/index.html"
+					   class="btn btn-secondary">🏠 Home</a>
+				</div>
+			</div>
+		</main>
+
+		<footer>
+			<p>Splitflap Display System</p>
+		</footer>
 	</div>
 
 	<!-- Character picker overlay (copied from splitflap.html) -->

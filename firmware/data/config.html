@@ -3,105 +3,142 @@
 
 <head>
 	<meta charset="utf-8">
-	<title>SplitFlap Config</title>
+	<title>Splitflap - Configuration</title>
 	<meta name="description"
-		  content="">
+		  content="Splitflap Display Configuration">
 	<meta name="viewport"
 		  content="width=device-width, initial-scale=1">
+	<link rel="stylesheet"
+		  href="splitflap-theme.css">
 	<link rel="stylesheet"
 		  href="config.css">
 	<script src="config.js"></script>
 </head>
 
 <body>
-	<h1>SplitFlap Config</h1>
-	<table>
-		<tr>
-			<td class="textColumn"> Time Zone: </td>
-			<td>
-				<select name="timezones"
-						class="common_width"
-						id="timezones"
-						title="Time Zone picker"
-						onchange="timezoneOnChange(this)">
-					<option value="0">Universal (UTC)</option>
-					<option value="1">New York (EST/EDT)</option>
-					<option value="2">Chicago (CST/CDT)</option>
-					<option value="3">Denver (MST/MDT)</option>
-					<option value="4">Los Angeles (PST/PDT)</option>
-				</select>
-			</td>
-		</tr>
+	<div class="container">
+		<header>
+			<h1>⚙️ Splitflap Configuration</h1>
+			<p>Configure your splitflap display settings</p>
+		</header>
 
-		<tr>
-			<td class="textColumn"> Quiet Time Start: </td>
-			<td>
-				<input type="time"
-					   title="Quiet Time Start picker"
-					   id="quietTimeStart"
-					   class="time-picker common_width"
-					   onchange="quietTimeStartPickerChanged(this)">
-				<span class="note">(24-hour format)</span>
-			</td>
-		</tr>
+		<main>
+			<div class="card">
+				<h2>Display Settings</h2>
+				<table class="info-table">
+					<tr>
+						<td class="label-col"> Time Zone: </td>
+						<td class="value-col">
+							<select name="timezones"
+									class="common_width"
+									id="timezones"
+									title="Time Zone picker"
+									onchange="timezoneOnChange(this)">
+								<option value="0">Universal (UTC)</option>
+								<option value="1">New York (EST/EDT)</option>
+								<option value="2">Chicago (CST/CDT)</option>
+								<option value="3">Denver (MST/MDT)</option>
+								<option value="4">Los Angeles (PST/PDT)</option>
+							</select>
+						</td>
+					</tr>
 
-		<tr>
-			<td class="textColumn"> Quiet Time End: </td>
-			<td>
-				<input type="time"
-					   title="Quiet Time End picker"
-					   id="quietTimeEnd"
-					   class="time-picker common_width"
-					   onchange="quietTimeEndPickerChanged(this)">
-				<span class="note">(24-hour format)</span>
-			</td>
-		</tr>
+					<tr>
+						<td class="label-col"> Quiet Time Start: </td>
+						<td class="value-col">
+							<input type="time"
+								   title="Quiet Time Start picker"
+								   id="quietTimeStart"
+								   class="time-picker common_width"
+								   onchange="quietTimeStartPickerChanged(this)">
+							<span class="note">(24-hour format)</span>
+						</td>
+					</tr>
 
-		<tr>
-			<td class="textColumn"> Automatic Status Updates: </td>
-			<td>
-				<label>
-					<input type="checkbox"
-						   id="autoStatusUpdates"
-						   onchange="autoStatusUpdatesChanged(this)">
-					Enable periodic display updates from automatic systems (e.g. clock)
-				</label>
-			</td>
-		</tr>
+					<tr>
+						<td class="label-col"> Quiet Time End: </td>
+						<td class="value-col">
+							<input type="time"
+								   title="Quiet Time End picker"
+								   id="quietTimeEnd"
+								   class="time-picker common_width"
+								   onchange="quietTimeEndPickerChanged(this)">
+							<span class="note">(24-hour format)</span>
+						</td>
+					</tr>
 
-		<tr>
-			<td class="textColumn"> MQTT Broker: </td>
-			<td>
-				<input type="text"
-					   title="MQTT Broker"
-					   id="mqttBroker"
-					   class="common_width"
-					   placeholder="mqtt.local"
-					   onchange="mqttBrokerChanged(this)">
-			</td>
-		</tr>
+					<tr>
+						<td class="label-col"> Automatic Status Updates: </td>
+						<td class="value-col">
+							<label>
+								<input type="checkbox"
+									   id="autoStatusUpdates"
+									   onchange="autoStatusUpdatesChanged(this)">
+								Enable periodic display updates from automatic systems (e.g. clock)
+							</label>
+						</td>
+					</tr>
+				</table>
+			</div>
 
-		<tr>
-			<td class="textColumn"> MQTT Port: </td>
-			<td>
-				<input type="number"
-					   title="MQTT Port"
-					   id="mqttPort"
-					   class="common_width"
-					   min="1"
-					   max="65535"
-					   placeholder="1883"
-					   onchange="mqttPortChanged(this)">
-			</td>
-		</tr>
+			<div class="card">
+				<h2>MQTT Settings</h2>
+				<table class="info-table">
+					<tr>
+						<td class="label-col"> MQTT Enabled: </td>
+						<td class="value-col">
+							<label>
+								<input type="checkbox"
+									   id="mqttEnabled"
+									   onchange="mqttEnabledChanged(this)">
+								Enable MQTT connections and message handling
+							</label>
+						</td>
+					</tr>
 
-	</table>
+					<tr>
+						<td class="label-col"> MQTT Broker: </td>
+						<td class="value-col">
+							<input type="text"
+								   title="MQTT Broker"
+								   id="mqttBroker"
+								   class="common_width"
+								   placeholder="mqtt.local"
+								   onchange="mqttBrokerChanged(this)">
+						</td>
+					</tr>
 
-	<br />
-	<a href="/network/config.html">WiFi Configuration</a>
+					<tr>
+						<td class="label-col"> MQTT Port: </td>
+						<td class="value-col">
+							<input type="number"
+								   title="MQTT Port"
+								   id="mqttPort"
+								   class="common_width"
+								   min="1"
+								   max="65535"
+								   placeholder="1883"
+								   onchange="mqttPortChanged(this)">
+						</td>
+					</tr>
+				</table>
+			</div>
 
-	<br />
-	<a href="/index.html">Status Page</a>
+			<div class="card">
+				<h2>Navigation</h2>
+				<div class="nav-links">
+					<a href="/network/config.html"
+					   class="btn">📶 WiFi Configuration</a>
+					<a href="/index.html"
+					   class="btn btn-secondary">🏠 Home</a>
+				</div>
+			</div>
+		</main>
+
+		<footer>
+			<p>Splitflap Display System</p>
+		</footer>
+	</div>
 </body>
 
 </html>

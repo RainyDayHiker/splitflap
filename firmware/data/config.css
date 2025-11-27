@@ -1,29 +1,20 @@
+/* Config-specific styles - works with house-iot-theme.css */
+
 input.common_width,
 select.common_width {
 	width: 170px;
+	padding: 8px 12px;
+	border: 2px solid #ddd;
+	border-radius: 6px;
+	font-size: 14px;
+	transition: all 0.3s ease;
 }
 
-input.common_width_text {
-	width: 162px;
-}
-
-td.textColumn {
-	width: 120px;
-}
-
-/* Styling for the time picker */
-input[type="time"] {
-	padding: 5px;
-	border: 1px solid #ccc;
-	border-radius: 4px;
-	font-size: 16px;
-	color: #333;
-}
-
-input[type="time"]:focus {
-	border-color: #4d90fe;
+input.common_width:focus,
+select.common_width:focus {
 	outline: none;
-	box-shadow: 0 0 5px rgba(77, 144, 254, 0.5);
+	border-color: #3498db;
+	box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
 }
 
 .note {
@@ -31,23 +22,4 @@ input[type="time"]:focus {
 	font-size: 12px;
 	color: #666;
 	font-style: italic;
-}
-
-/* Styling for the location button */
-.location-btn {
-	padding: 5px 10px;
-	background-color: #4285f4;
-	color: white;
-	border: none;
-	border-radius: 4px;
-	cursor: pointer;
-	font-size: 14px;
-}
-
-.location-btn:hover {
-	background-color: #3367d6;
-}
-
-.location-btn:active {
-	background-color: #2a56c6;
 }

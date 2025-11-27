@@ -1,3 +1,5 @@
+/* Setup-specific styles - works with house-iot-theme.css */
+
 /* Character picker overlay styles (from splitflap.css) */
 #char-picker-overlay {
 	display: none;
@@ -75,35 +77,62 @@
 	background: #666;
 }
 
+.setup-instructions {
+	margin-bottom: 15px;
+	padding: 15px;
+	background: rgba(52, 152, 219, 0.1);
+	border-left: 4px solid #3498db;
+	border-radius: 4px;
+}
+
+.setup-instructions p {
+	margin: 0;
+	color: #555;
+	line-height: 1.6;
+}
+
 .offset-input {
 	width: 100%;
 	box-sizing: border-box;
 	font-size: 14px;
 	margin-bottom: 2px;
+	padding: 6px 8px;
+	border: 2px solid #ddd;
+	border-radius: 4px;
+	transition: all 0.3s ease;
 }
 
-body {
-	font-family: Arial, sans-serif;
-	background: #f8f8f8;
+.offset-input:focus {
+	outline: none;
+	border-color: #3498db;
+	box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
 }
 
 #controls {
-	margin-bottom: 20px;
 	margin-top: 20px;
+	text-align: center;
 }
 
 #grid {
 	display: grid;
 	grid-template-columns: repeat(auto-fit, minmax(60px, 1fr));
 	gap: 8px;
+	margin-bottom: 20px;
 }
 
 .grid-cell {
 	background: #fff;
-	border: 1px solid #ccc;
+	border: 2px solid #ddd;
 	padding: 8px;
 	text-align: center;
 	position: relative;
+	border-radius: 6px;
+	transition: all 0.3s ease;
+}
+
+.grid-cell:hover {
+	border-color: #3498db;
+	box-shadow: 0 2px 8px rgba(52, 152, 219, 0.2);
 }
 
 .grid-controls {
@@ -116,14 +145,27 @@ body {
 
 .grid-btn {
 	font-size: 12px;
-	padding: 2px 6px;
+	padding: 4px 8px;
 	margin: 1px;
+	background: linear-gradient(135deg, #3498db, #2980b9);
+	color: white;
+	border: none;
+	border-radius: 4px;
+	cursor: pointer;
+	transition: all 0.3s ease;
 }
 
-/* ...existing code... */
+.grid-btn:hover {
+	background: linear-gradient(135deg, #2980b9, #1f5f7f);
+	transform: translateY(-1px);
+}
 
 #rangeInfo {
-	margin-bottom: 8px;
+	margin-bottom: 12px;
+	padding: 10px;
 	font-size: 0.9em;
-	color: #444;
+	color: #555;
+	background: rgba(241, 196, 15, 0.1);
+	border-left: 4px solid #f39c12;
+	border-radius: 4px;
 }

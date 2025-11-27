@@ -22,6 +22,7 @@ Config::Config(SimpleWebServer &webServer, Logger &logger) : Task("Config", 8192
 	_quietTimeEndHour = 7;
 	_quietTimeEndMinute = 0;
 	_autoStatusUpdatesEnabled = true;
+	_mqttEnabled = true;
 	_mqttBroker = "mqtt.local";
 	_mqttPort = 1883;
 }
@@ -139,6 +140,14 @@ bool Config::ProcessSetProperties()
 		processedSomething |= SetAutoStatusUpdatesEnabled(val != 0);
 	}
 
+	// Handle MQTT enabled toggle (expecting "mqttEnabled=0" or "1")
+	String mqttEnabled;
+	if (webServer.GetRequestArg("mqttEnabled", mqttEnabled))
+	{
+		int val = mqttEnabled.toInt();
+		processedSomething |= SetMqttEnabled(val != 0);
+	}
+
 	// Handle MQTT broker setting
 	String mqttBroker;
 	if (webServer.GetRequestArg("mqttBroker", mqttBroker))
@@ -174,6 +183,10 @@ void Config::Load(JsonDocument *doc)
 	if (docRef["AutoStatusUpdates"].is<bool>())
 		SetAutoStatusUpdatesEnabled((bool)docRef["AutoStatusUpdates"]);
 
+	// Load MQTT enabled
+	if (docRef["MqttEnabled"].is<bool>())
+		SetMqttEnabled((bool)docRef["MqttEnabled"]);
+
 	// Load MQTT broker
 	if (docRef["MqttBroker"].is<const char *>())
 		SetMqttBroker(docRef["MqttBroker"].as<const char *>());
@@ -198,6 +211,9 @@ void Config::Save(JsonDocument *doc)
 
 	// Save auto status updates setting
 	docRef["AutoStatusUpdates"] = _autoStatusUpdatesEnabled;
+
+	// Save MQTT enabled setting
+	docRef["MqttEnabled"] = _mqttEnabled;
 
 	// Save MQTT settings
 	docRef["MqttBroker"] = _mqttBroker;
@@ -316,6 +332,17 @@ bool Config::SetAutoStatusUpdatesEnabled(bool enabled)
 	if (fVerboseLog)
 		logger.logf("Config: Setting auto status updates to %s", enabled ? "enabled" : "disabled");
 	_autoStatusUpdatesEnabled = enabled;
+	_dirty = true;
+	return true;
+}
+
+bool Config::SetMqttEnabled(bool enabled)
+{
+	if (_mqttEnabled == enabled)
+		return false;
+	if (fVerboseLog)
+		logger.logf("Config: Setting MQTT to %s", enabled ? "enabled" : "disabled");
+	_mqttEnabled = enabled;
 	_dirty = true;
 	return true;
 }

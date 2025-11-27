@@ -36,16 +36,9 @@
 	border-radius: 8px;
 }
 
-body {
-	font-family: Arial, sans-serif;
-	background: #f8f8f8;
-	margin: 0;
-	padding: 0;
-}
-
-h1 {
+/* Special card styling for splitflap display */
+.splitflap-card {
 	text-align: center;
-	margin-top: 20px;
 }
 
 #splitflap-grid {

@@ -5,22 +5,70 @@
 	<meta charset="UTF-8">
 	<meta name="viewport"
 		  content="width=device-width, initial-scale=1.0">
-	<title>Splitflap Logs</title>
+	<title>Splitflap - System Logs</title>
+	<link rel="stylesheet"
+		  href="splitflap-theme.css">
 	<link rel="stylesheet"
 		  href="logs.css">
 </head>
 
 <body>
-	<h2>Recent Splitflap Logs</h2>
-	<table id="logTable">
-		<thead>
-			<tr>
-				<th>Log Message</th>
-			</tr>
-		</thead>
-		<tbody>
-		</tbody>
-	</table>
+	<div class="container">
+		<header>
+			<h1>📋 Splitflap System Logs</h1>
+			<p>Real-time system activity and messages</p>
+			<div class="controls">
+				<button id="clearLogs"
+						class="btn btn-secondary">Clear Display</button>
+				<button id="pausePolling"
+						class="btn">Pause Updates</button>
+				<span id="status"
+					  class="status-indicator online"></span>
+				<span id="statusText">Connected</span>
+			</div>
+		</header>
+
+		<main>
+			<div class="log-stats">
+				<div class="stat">
+					<span class="stat-label">Total Logs:</span>
+					<span id="totalLogs"
+						  class="stat-value">0</span>
+				</div>
+				<div class="stat">
+					<span class="stat-label">Last Updated:</span>
+					<span id="lastUpdated"
+						  class="stat-value">Never</span>
+				</div>
+				<div class="stat">
+					<span class="stat-label">Auto-refresh:</span>
+					<span id="autoRefreshStatus"
+						  class="stat-value">ON</span>
+				</div>
+			</div>
+
+			<div class="log-container">
+				<div id="logEntries"
+					 class="log-entries">
+					<div class="loading">Loading logs...</div>
+				</div>
+			</div>
+
+			<div class="card">
+				<h2>Navigation</h2>
+				<div class="nav-links">
+					<a href="/index.html"
+					   class="btn btn-secondary">🏠 Home</a>
+					<a href="/config.html"
+					   class="btn">⚙️ Configuration</a>
+				</div>
+			</div>
+		</main>
+
+		<footer>
+			<p>Splitflap Display System | Refreshes every 2 seconds</p>
+		</footer>
+	</div>
 	<script src="logs.js"></script>
 </body>
 

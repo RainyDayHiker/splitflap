@@ -5,9 +5,11 @@
 	<meta charset="UTF-8">
 	<meta name="viewport"
 		  content="width=device-width, initial-scale=1.0">
-	<title>Splitflap Grid</title>
+	<title>Splitflap Display</title>
 	<link href="https://fonts.googleapis.com/css2?family=Noto+Emoji&display=swap"
 		  rel="stylesheet">
+	<link rel="stylesheet"
+		  href="splitflap-theme.css">
 	<link rel="stylesheet"
 		  href="splitflap.css">
 	<link rel="stylesheet"
@@ -15,26 +17,48 @@
 </head>
 
 <body>
-	<h1>Splitflap Display</h1>
-	<div id="splitflap-grid"></div>
+	<div class="container">
+		<header>
+			<h1>📟 Splitflap Display</h1>
+			<p>Interactive splitflap display control</p>
+		</header>
 
-	<!-- Character picker overlay -->
-	<div id="char-picker-overlay">
-		<div id="char-picker">
-			<div class="char-picker-header">
-				<h2>Pick Character</h2>
-			</div>
-			<div id="char-picker-grid"></div>
-			<div class="char-picker-actions">
-				<button id="char-picker-cancel"
-						class="char-picker-button">Cancel</button>
-			</div>
-		</div>
-	</div>
+		<main>
+			<div class="card splitflap-card">
+				<div id="splitflap-grid"></div>
 
-	<div id="poll-controls">
-		<span id="poll-status"></span>
-		<button id="toggle-poll">Stop Polling</button>
+				<!-- Character picker overlay -->
+				<div id="char-picker-overlay">
+					<div id="char-picker">
+						<div class="char-picker-header">
+							<h2>Pick Character</h2>
+						</div>
+						<div id="char-picker-grid"></div>
+						<div class="char-picker-actions">
+							<button id="char-picker-cancel"
+									class="char-picker-button">Cancel</button>
+						</div>
+					</div>
+				</div>
+
+				<div id="poll-controls">
+					<span id="poll-status"></span>
+					<button id="toggle-poll">Stop Polling</button>
+				</div>
+			</div>
+
+			<div class="card">
+				<h2>Navigation</h2>
+				<div class="nav-links">
+					<a href="/index.html"
+					   class="btn btn-secondary">🏠 Home</a>
+				</div>
+			</div>
+		</main>
+
+		<footer>
+			<p>Splitflap Display System</p>
+		</footer>
 	</div>
 
 	<script src="splitflap.js"></script>
