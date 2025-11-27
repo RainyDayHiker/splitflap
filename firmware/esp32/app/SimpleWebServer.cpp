@@ -148,6 +148,7 @@ void SimpleWebServer::setCommonHeaders()
 {
 	server->sendHeader("Cache-Control", "no-cache");
 	server->sendHeader("X-Content-Type-Options", "nosniff");
+	server->sendHeader("Connection", "close");
 }
 
 void SimpleWebServer::AddHandler(const Uri &uri, std::function<void()> handler)
@@ -206,8 +207,13 @@ void SimpleWebServer::RespondWithFileOr404(String uri)
 			File file = LittleFS.open(uri, "r");
 			if (file)
 			{
-				server->streamFile(file, contentType);
+				size_t sent = server->streamFile(file, contentType);
 				file.close();
+				if (sent > 0)
+				{
+					// Ensure connection is closed after file transfer to free socket
+					server->client().stop();
+				}
 				return;
 			}
 			logger.logf("File failed to open after finding it!");
@@ -223,6 +229,7 @@ void SimpleWebServer::RespondWith404()
 {
 	setCommonHeaders();
 	server->send(404, "text/plain; charset=utf-8", "File Not Found");
+	server->client().stop();
 }
 
 void SimpleWebServer::RespondWithContent(int responseCode, String response, String fileType)
@@ -230,6 +237,7 @@ void SimpleWebServer::RespondWithContent(int responseCode, String response, Stri
 	String contentType = mime::getContentType(fileType);
 	setCommonHeaders();
 	server->send(responseCode, contentType, response);
+	server->client().stop();
 }
 
 void SimpleWebServer::Redirect(String uri)
@@ -269,7 +277,8 @@ void SimpleWebServer::run()
 		}
 
 		// Short delay – tuneable. Reducing this (e.g. to 2ms) can improve latency at cost of CPU.
-		vTaskDelay(pdMS_TO_TICKS(5));
+		// Increased to 20ms to reduce socket pressure and prevent "No more processes" errors
+		vTaskDelay(pdMS_TO_TICKS(20));
 	}
 }
 

@@ -4,6 +4,7 @@ class LogViewer {
 	constructor() {
 		this.pollingInterval = null;
 		this.isPolling = false;
+		this.isFetching = false; // Track if fetch is in progress
 		this.lastLog = null;
 		this.displayedLogs = [];
 		this.pollIntervalMs = 2000; // 2 seconds
@@ -52,11 +53,20 @@ class LogViewer {
 	}
 
 	async fetchLogs() {
-		const response = await fetch('/logs');
-		if (!response.ok) {
-			throw new Error(`HTTP error! status: ${response.status}`);
+		if (this.isFetching) {
+			console.log('Skipping logs fetch - previous request still in progress');
+			return [];
 		}
-		return await response.json();
+		this.isFetching = true;
+		try {
+			const response = await fetch('/logs');
+			if (!response.ok) {
+				throw new Error(`HTTP error! status: ${response.status}`);
+			}
+			return await response.json();
+		} finally {
+			this.isFetching = false;
+		}
 	}
 
 	startPolling() {

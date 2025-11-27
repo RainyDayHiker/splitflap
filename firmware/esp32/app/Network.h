@@ -65,6 +65,8 @@ private:
 	void GetNetworkList();
 
 	void updateDisplayStatus();
+	void ensureMDNS();
+	void stopMDNS();
 
 	DisplayTask &displayTask;
 	SimpleWebServer &webServer;
@@ -76,4 +78,6 @@ private:
 	String apHostName;
 
 	String lastStatusSSID;
+	wl_status_t lastWifiStatus;
+	bool mdnsStarted;
 };

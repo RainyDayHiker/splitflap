@@ -11,6 +11,7 @@ const pollStatusEl = document.getElementById('poll-status');
 const toggleBtn = document.getElementById('toggle-poll');
 let pollIntervalId = null;
 let pollStartTime = null;
+let isFetching = false; // Track if a fetch is in progress
 
 // Helper: wrap an Instruction font character with any needed centering class
 function renderInstructionChar(ch) {
@@ -37,6 +38,11 @@ function getStateName(code) {
 }
 
 function fetchState() {
+	if (isFetching) {
+		console.log('Skipping fetch - previous request still in progress');
+		return;
+	}
+	isFetching = true;
 	fetch('splitflap/state.json')
 		.then(r => r.json())
 		.then(data => {
@@ -47,6 +53,9 @@ function fetchState() {
 		.catch(() => {
 			grid.innerHTML = '<div style="text-align:center;color:#c00;">Error loading state</div>';
 			moduleNodes.clear();
+		})
+		.finally(() => {
+			isFetching = false;
 		});
 }
 

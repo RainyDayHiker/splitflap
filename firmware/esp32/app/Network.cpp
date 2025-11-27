@@ -55,7 +55,9 @@ Network::Network(DisplayTask &display_task, SimpleWebServer &webServer, Logger &
 	  displayTask(display_task),
 	  webServer(webServer),
 	  logger(logger),
-	  lastStatusSSID("")
+	  lastStatusSSID(""),
+	  lastWifiStatus(WL_IDLE_STATUS),
+	  mdnsStarted(false)
 {
 	hostNameFQDN = DEVICE_INSTANCE_NAME;
 	hostNameFQDN += ".local";
@@ -106,9 +108,7 @@ void Network::Setup()
 		}
 	}
 
-	// Setup MDNS
-	MDNS.begin(DEVICE_INSTANCE_NAME);
-	MDNS.addService("http", "tcp", 80);
+	// mDNS will be started in run() after WiFi connects
 
 	// Register Page Handlers for the WebServer
 	// Wifi setup
@@ -134,6 +134,23 @@ void Network::run()
 
 		if (dnsServer)
 			dnsServer->processNextRequest();
+
+		// Monitor WiFi state and manage mDNS
+		wl_status_t currentStatus = WiFi.status();
+		if (currentStatus != lastWifiStatus)
+		{
+			if (currentStatus == WL_CONNECTED)
+			{
+				logger.logf("wifi: Connected to %s", WiFi.SSID().c_str());
+				ensureMDNS();
+			}
+			else if (lastWifiStatus == WL_CONNECTED)
+			{
+				logger.log("wifi: Disconnected");
+				stopMDNS();
+			}
+			lastWifiStatus = currentStatus;
+		}
 
 		// Turn off config mode after 10 minutes so that the device isn't in AP mode forever - a reboot will restart it
 		if (inConfigMode && (millis() - configModeStartTime > 1000 * 60 * 10))
@@ -294,5 +311,32 @@ void Network::updateDisplayStatus()
 		lastStatusSSID = ssid;
 		logger.log(ssid.c_str());
 		displayTask.setMessage(1, ssid.c_str());
+	}
+}
+
+void Network::ensureMDNS()
+{
+	if (!mdnsStarted && WiFi.status() == WL_CONNECTED && !inConfigMode)
+	{
+		if (MDNS.begin(DEVICE_INSTANCE_NAME))
+		{
+			MDNS.addService("http", "tcp", 80);
+			mdnsStarted = true;
+			logger.logf("mDNS: Started as %s.local", DEVICE_INSTANCE_NAME);
+		}
+		else
+		{
+			logger.log("mDNS: Failed to start");
+		}
+	}
+}
+
+void Network::stopMDNS()
+{
+	if (mdnsStarted)
+	{
+		MDNS.end();
+		mdnsStarted = false;
+		logger.log("mDNS: Stopped");
 	}
 }

@@ -17,21 +17,23 @@ SplitFlapComposer::SplitFlapComposer(SplitFlap &splitFlap, Logger &logger, const
 	  _hasTemporaryMessage(false)
 {
 	logger.logf("MQTT Broker setup: %s:%d", Config::GetInstance()->GetMqttBroker().c_str(), Config::GetInstance()->GetMqttPort());
-	_mqttClient.host = Config::GetInstance()->GetMqttBroker();
-	_mqttClient.port = Config::GetInstance()->GetMqttPort();
+	if (Config::GetInstance()->GetMqttEnabled())
+	{
+		_mqttClient.host = Config::GetInstance()->GetMqttBroker();
+		_mqttClient.port = Config::GetInstance()->GetMqttPort();
 
-	// Subscribe to golf handicap messages (matches house/golf/anything)
-	_mqttClient.subscribe("house/golf/#", [this](const char *topic, const char *payload)
-						  { OnHandicapMessage(topic, payload); });
+		// Subscribe to golf handicap messages (matches house/golf/anything)
+		_mqttClient.subscribe("house/golf/#", [this](const char *topic, const char *payload)
+							  { OnHandicapMessage(topic, payload); });
 
-	// Subscribe to weather messages (exact match for the published topic)
-	_mqttClient.subscribe("house/weather/", [this](const char *topic, const char *payload)
-						  { OnWeatherMessage(topic, payload); });
+		// Subscribe to weather messages (exact match for the published topic)
+		_mqttClient.subscribe("house/weather/", [this](const char *topic, const char *payload)
+							  { OnWeatherMessage(topic, payload); });
 
-	// Subscribe to Split messages (exact match for the published topic)
-	_mqttClient.subscribe("house/splitflap/message", [this](const char *topic, const char *payload)
-						  { OnCustomMessage(topic, payload); });
-
+		// Subscribe to Split messages (exact match for the published topic)
+		_mqttClient.subscribe("house/splitflap/message", [this](const char *topic, const char *payload)
+							  { OnCustomMessage(topic, payload); });
+	}
 	logger.log("SplitFlapComposer setup complete");
 }
 
