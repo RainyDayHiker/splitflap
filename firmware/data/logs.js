@@ -208,14 +208,3 @@ class LogViewer {
 document.addEventListener('DOMContentLoaded', () => {
 	window.logViewer = new LogViewer();
 });
-
-// Handle page visibility changes to pause/resume polling
-document.addEventListener('visibilitychange', () => {
-	if (window.logViewer) {
-		if (document.hidden) {
-			window.logViewer.stopPolling();
-		} else {
-			window.logViewer.startPolling();
-		}
-	}
-});
