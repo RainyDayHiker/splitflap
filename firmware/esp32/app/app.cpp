@@ -1,8 +1,7 @@
 #include "app.h"
 #include "LocalTime.h"
 
-App::App(SplitflapTask &splitflapTask, DisplayTask &displayTask, Logger &logger) : clockTask(splitflapTask, logger),
-																				   simpleWebServer(logger),
+App::App(SplitflapTask &splitflapTask, DisplayTask &displayTask, Logger &logger) : simpleWebServer(logger),
 																				   network(displayTask, simpleWebServer, logger),
 																				   config(simpleWebServer, logger),
 																				   splitFlap(splitflapTask, logger),
@@ -24,8 +23,6 @@ void App::begin()
 	network.begin();
 
 	config.begin();
-
-	clockTask.begin();
 
 	splitFlap.begin();
 

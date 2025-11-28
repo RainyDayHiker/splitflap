@@ -1,6 +1,5 @@
 #pragma once
 #include <deque>
-#include "Clock.h"
 #include "SimpleWebServer.h"
 #include "Network.h"
 #include "Config.h"
@@ -20,7 +19,6 @@ public:
 	std::vector<std::string> getRecentLogs() const;
 
 private:
-	Clock clockTask;
 	SimpleWebServer simpleWebServer;
 	Network network;
 	Config config;

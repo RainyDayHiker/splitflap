@@ -14,7 +14,11 @@ SplitFlapComposer::SplitFlapComposer(SplitFlap &splitFlap, Logger &logger, const
 	  _hasTemperature(false),
 	  _temporaryMessage(""),
 	  _temporaryMessageExpiry(0),
-	  _hasTemporaryMessage(false)
+	  _hasTemporaryMessage(false),
+	  _pendingDisplayMessage(""),
+	  _hasPendingDisplayMessage(false),
+	  _lastDisplayUpdateMillis(0),
+	  _lastPublishedMinute(-1)
 {
 	logger.logf("MQTT Broker setup: %s:%d", Config::GetInstance()->GetMqttBroker().c_str(), Config::GetInstance()->GetMqttPort());
 	if (Config::GetInstance()->GetMqttEnabled())
@@ -33,8 +37,15 @@ SplitFlapComposer::SplitFlapComposer(SplitFlap &splitFlap, Logger &logger, const
 		// Subscribe to Split messages (exact match for the published topic)
 		_mqttClient.subscribe("house/splitflap/message", [this](const char *topic, const char *payload)
 							  { OnCustomMessage(topic, payload); });
+
+		// Subscribe to display messages to update the split-flap directly
+		_mqttClient.subscribe("house/splitflap/display", [this](const char *topic, const char *payload)
+							  { OnDisplayMessage(topic, payload); });
 	}
 	logger.log("SplitFlapComposer setup complete");
+
+	// Trigger initial display update to show connection status
+	PublishComposedMessage();
 }
 
 void SplitFlapComposer::run()
@@ -55,6 +66,9 @@ void SplitFlapComposer::run()
 			}
 
 			_mqttClient.loop(); // Process MQTT messages
+
+			// Yield after processing MQTT to prevent watchdog timeout
+			taskYIELD();
 		}
 		else
 		{
@@ -64,6 +78,8 @@ void SplitFlapComposer::run()
 				logger.log("MQTT disabled, disconnecting...");
 				_mqttClient.disconnect();
 			}
+			// Yield when MQTT is disabled to prevent tight loop
+			taskYIELD();
 		}
 
 		// Check if temporary message has expired
@@ -77,14 +93,16 @@ void SplitFlapComposer::run()
 				_temporaryMessage = "";
 
 				// Republish the normal composed message
-				if (_hasHandicap && _hasTemperature)
-				{
-					PublishComposedMessage();
-				}
+				PublishComposedMessage();
 			}
-		}
+		} // Check if time has changed and update display if needed
+		CheckAndUpdateTime();
 
-		vTaskDelay(pdMS_TO_TICKS(200));
+		// Process any pending display updates with throttling
+		ProcessPendingDisplayUpdate();
+
+		// Shorter delay to yield more frequently and prevent watchdog timeout
+		vTaskDelay(pdMS_TO_TICKS(100));
 	}
 }
 
@@ -111,16 +129,8 @@ void SplitFlapComposer::OnHandicapMessage(const char *topic, const char *payload
 
 		logger.logf("Updated handicap value: %s", _latestHandicap.c_str());
 
-		// Publish the composed message if we have both values (and no temporary message active)
-		if (_hasHandicap && _hasTemperature)
-		{
-			if (!_hasTemporaryMessage)
-				PublishComposedMessage();
-		}
-		else
-		{
-			logger.logf("Waiting for temperature before publishing (hasTemp=%s)", _hasTemperature ? "yes" : "no");
-		}
+		// Publish the composed message
+		PublishComposedMessage();
 	}
 	else
 	{
@@ -151,16 +161,8 @@ void SplitFlapComposer::OnWeatherMessage(const char *topic, const char *payload)
 
 		logger.logf("Updated temperature value: %s", _latestTemperature.c_str());
 
-		// Publish the composed message if we have both values (and no temporary message active)
-		if (_hasHandicap && _hasTemperature)
-		{
-			if (!_hasTemporaryMessage)
-				PublishComposedMessage();
-		}
-		else
-		{
-			logger.logf("Waiting for handicap before publishing (hasHandicap=%s)", _hasHandicap ? "yes" : "no");
-		}
+		// Publish the composed message
+		PublishComposedMessage();
 	}
 	else
 	{
@@ -170,14 +172,43 @@ void SplitFlapComposer::OnWeatherMessage(const char *topic, const char *payload)
 
 void SplitFlapComposer::PublishComposedMessage()
 {
+	// Skip if a temporary message is active
+	if (_hasTemporaryMessage)
+		return;
+
+	// Get current time in hh:mm format if time sync has happened
+	String timeStr = "      "; // 6 spaces as default
+	if (LocalTime::HasTimeSyncHappened())
+	{
+		struct tm timeinfo;
+		time_t now = LocalTime::GetCurrentTime(&timeinfo);
+		char timeBuf[6]; // "hh:mm\0"
+		snprintf(timeBuf, sizeof(timeBuf), "%2d:%02d", timeinfo.tm_hour, timeinfo.tm_min);
+		timeStr = String(timeBuf);
+
+		// Update last published minute
+		_lastPublishedMinute = timeinfo.tm_min;
+	}
+
+	// Compose the message: "hh:mm handicap temperature" (time is always 6 chars, blank if no sync)
+	String composedMessage = timeStr + _latestHandicap + " " + _latestTemperature;
+
 	if (!_mqttClient.connected())
 	{
-		logger.log("MQTT not connected, cannot publish split-flap message");
+		logger.log("MQTT not connected, setting display message directly");
+
+		// Ensure message is at least 6 characters long, padding with spaces if needed
+		while (composedMessage.length() < 6)
+			composedMessage += " ";
+
+		// Set 6th character to 'b' (0-indexed position 5)
+		composedMessage.setCharAt(5, 'b');
+
+		// Set directly to pending display message
+		SetPendingDisplayMessage(composedMessage);
 		return;
 	}
 
-	// Compose the message: "handicap temperature"
-	String composedMessage = _latestHandicap + " " + _latestTemperature;
 	String topic = "house/splitflap/display";
 
 	bool published = _mqttClient.publish(topic, composedMessage);
@@ -250,4 +281,58 @@ void SplitFlapComposer::PublishTemporaryMessage()
 	{
 		logger.log("Failed to publish temporary split-flap message to MQTT");
 	}
+}
+
+void SplitFlapComposer::OnDisplayMessage(const char *topic, const char *payload)
+{
+	logger.logf("SplitFlapComposer.OnDisplayMessage called with payload: %s", payload);
+
+	// Queue the message instead of blocking - it will be processed in the main loop
+	SetPendingDisplayMessage(String(payload));
+}
+
+void SplitFlapComposer::ProcessPendingDisplayUpdate()
+{
+	if (!_hasPendingDisplayMessage)
+	{
+		return;
+	}
+
+	// Throttle updates to prevent queue overflow
+	unsigned long now = millis();
+	if (now - _lastDisplayUpdateMillis < MIN_DISPLAY_UPDATE_INTERVAL_MS)
+	{
+		return; // Too soon, skip this update
+	}
+
+	// Process the update
+	splitFlap.SetDisplayMessage(_pendingDisplayMessage);
+	_hasPendingDisplayMessage = false;
+	_lastDisplayUpdateMillis = now;
+	logger.logf("Processed pending display update: %s", _pendingDisplayMessage.c_str());
+}
+
+void SplitFlapComposer::CheckAndUpdateTime()
+{
+	// Skip if time sync hasn't happened yet
+	if (!LocalTime::HasTimeSyncHappened())
+		return;
+
+	// Get current time
+	struct tm timeinfo;
+	LocalTime::GetCurrentTime(&timeinfo);
+
+	// Check if the minute has changed
+	if (_lastPublishedMinute != timeinfo.tm_min)
+	{
+		logger.logf("Time changed from minute %d to %d, updating display",
+					_lastPublishedMinute, timeinfo.tm_min);
+		PublishComposedMessage();
+	}
+}
+
+void SplitFlapComposer::SetPendingDisplayMessage(const String &message)
+{
+	_pendingDisplayMessage = message;
+	_hasPendingDisplayMessage = true;
 }

@@ -27,6 +27,7 @@ private:
 	void OnHandicapMessage(const char *topic, const char *payload);
 	void OnWeatherMessage(const char *topic, const char *payload);
 	void OnCustomMessage(const char *topic, const char *payload);
+	void OnDisplayMessage(const char *topic, const char *payload);
 
 private:
 	PicoMQTT::Client _mqttClient;
@@ -43,7 +44,19 @@ private:
 	bool _hasTemporaryMessage;
 	static const unsigned long TEMPORARY_MESSAGE_DURATION = 300; // 5 minutes in seconds
 
+	// Display update throttling to prevent queue overflow
+	String _pendingDisplayMessage;
+	bool _hasPendingDisplayMessage;
+	unsigned long _lastDisplayUpdateMillis;
+	static const unsigned long MIN_DISPLAY_UPDATE_INTERVAL_MS = 500; // Min 500ms between updates
+
+	// Time tracking for periodic updates
+	int _lastPublishedMinute;
+
 	// Publish the composed message
 	void PublishComposedMessage();
 	void PublishTemporaryMessage();
+	void ProcessPendingDisplayUpdate();
+	void CheckAndUpdateTime();
+	void SetPendingDisplayMessage(const String &message);
 };
