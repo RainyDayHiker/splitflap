@@ -33,13 +33,13 @@ void Clock::run()
 		// Check to see if we have a good time sync and a good config
 		if (!LocalTime::HasTimeSyncHappened() || Config::GetInstance() == nullptr)
 		{
-			delay(1000);
+			vTaskDelay(pdMS_TO_TICKS(1000));
 			continue;
 		}
 
 		if (!Config::GetInstance()->GetAutoStatusUpdatesEnabled())
 		{
-			delay(5000);
+			vTaskDelay(pdMS_TO_TICKS(5000));
 			continue;
 		}
 
@@ -57,7 +57,7 @@ void Clock::run()
 					buf[i] = ' ';
 				splitFlap.showString(buf, NUM_MODULES, false);
 			}
-			delay(60 * 1000);
+			vTaskDelay(pdMS_TO_TICKS(60 * 1000));
 			continue;
 		}
 
@@ -68,7 +68,7 @@ void Clock::run()
 		if (currentTime.equals(temp))
 		{
 			// No change in time, do nothing
-			delay(500);
+			vTaskDelay(pdMS_TO_TICKS(500));
 			continue;
 		}
 
@@ -81,6 +81,6 @@ void Clock::run()
 		snprintf(buf, sizeof(buf), "abcdef%s%cabcdefabcdef", temp, emoji);
 		logger.logf("Clock: updating time to %s", buf);
 		splitFlap.showString(buf, NUM_MODULES, false);
-		delay(55 * 1000);
+		vTaskDelay(pdMS_TO_TICKS(55 * 1000));
 	}
 }

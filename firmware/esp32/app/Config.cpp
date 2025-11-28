@@ -40,7 +40,7 @@ void Config::run()
 	while (1)
 	{
 		SaveConfig();
-		delay(10 * 1000);
+		vTaskDelay(pdMS_TO_TICKS(10 * 1000));
 	}
 }
 

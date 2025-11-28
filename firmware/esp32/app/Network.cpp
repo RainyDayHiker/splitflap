@@ -158,7 +158,7 @@ void Network::run()
 
 		updateDisplayStatus();
 
-		delay(1000); // Check WiFi status every second
+		vTaskDelay(pdMS_TO_TICKS(1000)); // Check WiFi status every second
 	}
 }
 
@@ -185,7 +185,7 @@ void Network::ConfigModeStart()
 	WiFi.mode(WIFI_AP);
 	WiFi.softAP(apHostName.c_str(), AP_PASSWORD);
 	logger.logf("wifi: starting AP mode: %s", apHostName.c_str());
-	delay(100); // Pause for it to start
+	vTaskDelay(pdMS_TO_TICKS(100)); // Pause for it to start
 
 	// Setup DNS to redirect all domains to the AP
 	dnsServer = new DNSServer();

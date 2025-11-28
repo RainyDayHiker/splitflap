@@ -37,7 +37,7 @@ void SplitFlap::run()
 {
 	while (1)
 	{
-		delay(120 * 1000); // Nothing to do so sleep a lot
+		vTaskDelay(pdMS_TO_TICKS(120 * 1000)); // Nothing to do so sleep a lot
 	}
 }
 
@@ -46,7 +46,7 @@ void SplitFlap::registerHandlers(SimpleWebServer &webServer)
 	webServer.AddHandler("/splitflap/state.json", [this, &webServer]()
 						 {
 			String json = buildStateJson();
-			webServer.RespondWithContent(200, json, ".json"); });
+			webServer.RespondWithContentChunked(200, json, ".json"); });
 
 	// Set a single flap's target character via dedicated handler
 	webServer.AddHandler("/splitflap/set_flap", HTTP_POST, [this, &webServer]()

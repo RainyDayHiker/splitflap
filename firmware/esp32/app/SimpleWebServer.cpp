@@ -240,6 +240,52 @@ void SimpleWebServer::RespondWithContent(int responseCode, String response, Stri
 	server->client().stop();
 }
 
+void SimpleWebServer::RespondWithContentChunked(int responseCode, const String &response, String fileType)
+{
+	String contentType = mime::getContentType(fileType);
+	setCommonHeaders();
+
+	// Check if client is still connected before attempting to send
+	if (!server->client() || !server->client().connected())
+	{
+		return;
+	}
+
+	// Send headers first
+	server->setContentLength(response.length());
+	server->send(responseCode, contentType, "");
+
+	// Send content in chunks to avoid buffer overflow
+	const size_t CHUNK_SIZE = 512;
+	size_t len = response.length();
+	size_t pos = 0;
+
+	while (pos < len)
+	{
+		// Check if client is still connected
+		if (!server->client() || !server->client().connected())
+		{
+			break;
+		}
+
+		size_t chunkLen = min(CHUNK_SIZE, len - pos);
+		server->sendContent(response.substring(pos, pos + chunkLen));
+
+		pos += chunkLen;
+		// Small delay to let TCP stack process
+		if (pos < len)
+		{
+			vTaskDelay(pdMS_TO_TICKS(5));
+		}
+	}
+
+	// Always close the connection
+	if (server->client())
+	{
+		server->client().stop();
+	}
+}
+
 void SimpleWebServer::Redirect(String uri)
 {
 	setCommonHeaders();
@@ -434,7 +480,10 @@ void SimpleWebServer::SetupOTA()
 
 	// Block access to /update - support only via direct scripts
 	server->on("/update", HTTP_GET, [this]()
-			   { server->send(403, "text/plain", "Access Denied. OTA updates disabled via web interface."); });
+			   { 
+				   setCommonHeaders();
+				   server->send(403, "text/plain", "Access Denied. OTA updates disabled via web interface.");
+				   server->client().stop(); });
 
 	// Initialize ElegantOTA - web-based OTA updates with authentication
 	// Note: The webpage won't be accessible because our handler above takes precedence

@@ -64,7 +64,9 @@ void SplitFlapComposer::run()
 				logger.log("MQTT disabled, disconnecting...");
 				_mqttClient.disconnect();
 			}
-		} // Check if temporary message has expired
+		}
+
+		// Check if temporary message has expired
 		if (_hasTemporaryMessage)
 		{
 			time_t now = LocalTime::GetCurrentTime(nullptr);
@@ -82,20 +84,7 @@ void SplitFlapComposer::run()
 			}
 		}
 
-		// Test section.  Wait 5 seconds after starting then post a test message
-		static bool testMessageSent = false;
-		if (!testMessageSent)
-		{
-			static unsigned long startTime = millis();
-			if (millis() - startTime > 5000)
-			{
-				if (Config::GetInstance()->GetAutoStatusUpdatesEnabled())
-					splitFlap.SetDisplayMessage("ABCDEFGHIJKLMNOPQRSTUVWXYZ");
-				testMessageSent = true;
-			}
-		}
-
-		delay(200);
+		vTaskDelay(pdMS_TO_TICKS(200));
 	}
 }
 
