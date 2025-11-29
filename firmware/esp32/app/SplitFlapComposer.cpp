@@ -9,9 +9,18 @@ SplitFlapComposer::SplitFlapComposer(SplitFlap &splitFlap, Logger &logger, const
 	  splitFlap(splitFlap),
 	  logger(logger),
 	  _latestHandicap(""),
-	  _latestTemperature(""),
+	  _latestTemperature(0),
+	  _latestConditionCode(1000),
+	  _latestWindSpeed(0.0),
 	  _hasHandicap(false),
 	  _hasTemperature(false),
+	  _latestStockPrice(0.0),
+	  _latestStockIsUp(false),
+	  _hasStock(false),
+	  _timeString("      "),
+	  _stockString("      "),
+	  _handicapString("      "),
+	  _weatherString("      "),
 	  _temporaryMessage(""),
 	  _temporaryMessageExpiry(0),
 	  _hasTemporaryMessage(false),
@@ -41,6 +50,10 @@ SplitFlapComposer::SplitFlapComposer(SplitFlap &splitFlap, Logger &logger, const
 		// Subscribe to display messages to update the split-flap directly
 		_mqttClient.subscribe("house/splitflap/display", [this](const char *topic, const char *payload)
 							  { OnDisplayMessage(topic, payload); });
+
+		// Subscribe to stock messages (exact match for MSFT)
+		_mqttClient.subscribe("house/stock/MSFT", [this](const char *topic, const char *payload)
+							  { OnStockMessage(topic, payload); });
 	}
 	logger.log("SplitFlapComposer setup complete");
 
@@ -129,6 +142,13 @@ void SplitFlapComposer::OnHandicapMessage(const char *topic, const char *payload
 
 		logger.logf("Updated handicap value: %s", _latestHandicap.c_str());
 
+		// Update handicap string
+		_handicapString = "H:" + _latestHandicap;
+		while (_handicapString.length() < 6)
+			_handicapString += " ";
+		if (_handicapString.length() > 6)
+			_handicapString = _handicapString.substring(0, 6);
+
 		// Publish the composed message
 		PublishComposedMessage();
 	}
@@ -156,10 +176,24 @@ void SplitFlapComposer::OnWeatherMessage(const char *topic, const char *payload)
 	if (doc["temperature"].is<float>())
 	{
 		float tempValue = doc["temperature"];
-		_latestTemperature = String((int)tempValue); // Format as integer
+
+		// Clamp temperature to range -99 to 999
+		_latestTemperature = constrain((int)tempValue, -99, 999);
 		_hasTemperature = true;
 
-		logger.logf("Updated temperature value: %s", _latestTemperature.c_str());
+		// Extract condition code if available, default to 1000 (sunny/clear)
+		_latestConditionCode = doc["conditionCode"] | 1000;
+
+		// Extract wind speed if available, default to 0.0
+		_latestWindSpeed = doc["windSpeed"] | 0.0;
+
+		logger.logf("Updated weather: temp=%d, condition=%d, wind=%.1f", _latestTemperature, _latestConditionCode, _latestWindSpeed);
+
+		// Update weather string: 2 spaces + temp (3 chars, right-aligned) + condition indicator
+		char tempBuf[4]; // 3 chars + null terminator
+		snprintf(tempBuf, sizeof(tempBuf), "%3d", _latestTemperature);
+		char conditionChar = MapConditionCodeToChar(_latestConditionCode, _latestWindSpeed);
+		_weatherString = "  " + String(tempBuf) + conditionChar;
 
 		// Publish the composed message
 		PublishComposedMessage();
@@ -176,22 +210,8 @@ void SplitFlapComposer::PublishComposedMessage()
 	if (_hasTemporaryMessage)
 		return;
 
-	// Get current time in hh:mm format if time sync has happened
-	String timeStr = "      "; // 6 spaces as default
-	if (LocalTime::HasTimeSyncHappened())
-	{
-		struct tm timeinfo;
-		time_t now = LocalTime::GetCurrentTime(&timeinfo);
-		char timeBuf[6]; // "hh:mm\0"
-		snprintf(timeBuf, sizeof(timeBuf), "%2d:%02d", timeinfo.tm_hour, timeinfo.tm_min);
-		timeStr = String(timeBuf);
-
-		// Update last published minute
-		_lastPublishedMinute = timeinfo.tm_min;
-	}
-
-	// Compose the message: "hh:mm handicap temperature" (time is always 6 chars, blank if no sync)
-	String composedMessage = timeStr + _latestHandicap + " " + _latestTemperature;
+	// Compose the message from each 6-character section: time, stock, handicap, weather
+	String composedMessage = _timeString + _handicapString + _stockString + _weatherString;
 
 	if (!_mqttClient.connected())
 	{
@@ -291,6 +311,49 @@ void SplitFlapComposer::OnDisplayMessage(const char *topic, const char *payload)
 	SetPendingDisplayMessage(String(payload));
 }
 
+void SplitFlapComposer::OnStockMessage(const char *topic, const char *payload)
+{
+	logger.logf("SplitFlapComposer.OnStockMessage called for topic: %s", topic);
+
+	// Parse the JSON payload to extract price and change
+	JsonDocument doc;
+	DeserializationError error = deserializeJson(doc, payload);
+
+	if (error)
+	{
+		logger.logf("Failed to parse stock JSON: %s", error.c_str());
+		return;
+	}
+
+	// Extract the price and change values
+	if (doc["price"].is<float>() && doc["change"].is<float>())
+	{
+		float price = doc["price"];
+		float change = doc["change"];
+
+		// Store price and direction, clamping price to fit in 5 characters (max 999.9, min -99.9)
+		_latestStockPrice = constrain(price, -99.9f, 999.9f);
+		_latestStockIsUp = (change >= 0);
+		_hasStock = true;
+
+		logger.logf("Updated stock: price=%.1f, isUp=%s",
+					_latestStockPrice,
+					_latestStockIsUp ? "yes" : "no");
+
+		// Update stock string: 2 spaces + price (5 chars, right-aligned) + indicator (a=up, b=down)
+		char priceBuf[6]; // 5 chars + null terminator
+		snprintf(priceBuf, sizeof(priceBuf), "%5.1f", _latestStockPrice);
+		_stockString = String(priceBuf) + (_latestStockIsUp ? "a" : "b");
+
+		// Publish the composed message
+		PublishComposedMessage();
+	}
+	else
+	{
+		logger.log("Stock message did not contain 'price' and 'change' fields");
+	}
+}
+
 void SplitFlapComposer::ProcessPendingDisplayUpdate()
 {
 	if (!_hasPendingDisplayMessage)
@@ -327,6 +390,24 @@ void SplitFlapComposer::CheckAndUpdateTime()
 	{
 		logger.logf("Time changed from minute %d to %d, updating display",
 					_lastPublishedMinute, timeinfo.tm_min);
+
+		// Update the time string (6 characters: "hh:mm " in 12-hour format)
+		struct tm timeinfo;
+		LocalTime::GetCurrentTime(&timeinfo);
+
+		// Update last published minute
+		_lastPublishedMinute = timeinfo.tm_min;
+
+		// Convert to 12-hour format
+		int hour12 = timeinfo.tm_hour % 12;
+		if (hour12 == 0)
+			hour12 = 12; // 0 and 12 should display as 12
+
+		char timeBuf[7]; // "hh:mm \0"
+		snprintf(timeBuf, sizeof(timeBuf), "%2d:%02d ", hour12, timeinfo.tm_min);
+		_timeString = String(timeBuf);
+
+		// Publish the composed message
 		PublishComposedMessage();
 	}
 }
@@ -335,4 +416,100 @@ void SplitFlapComposer::SetPendingDisplayMessage(const String &message)
 {
 	_pendingDisplayMessage = message;
 	_hasPendingDisplayMessage = true;
+}
+
+char SplitFlapComposer::MapConditionCodeToChar(int conditionCode, float windSpeed)
+{
+	// Map condition codes to display characters:
+	// a = sun, b = cloud, c = rain, d = snow, e = wind, f = partly cloudy
+
+	char baseChar;
+
+	switch (conditionCode)
+	{
+	// Sunny/Clear
+	case 1000:
+		baseChar = 'a';
+		break;
+
+	// Partly cloudy
+	case 1003:
+		baseChar = 'f';
+		break;
+
+	// Cloudy/Overcast/Mist/Fog
+	case 1006:
+	case 1009:
+	case 1030:
+	case 1135:
+	case 1147:
+		baseChar = 'b';
+		break;
+
+	// Rain (all drizzle and rain conditions)
+	case 1063:
+	case 1072:
+	case 1150:
+	case 1153:
+	case 1168:
+	case 1171:
+	case 1180:
+	case 1183:
+	case 1186:
+	case 1189:
+	case 1192:
+	case 1195:
+	case 1198:
+	case 1201:
+	case 1240:
+	case 1243:
+	case 1246:
+	case 1273:
+	case 1276:
+		baseChar = 'c';
+		break;
+
+	// Snow (all snow, sleet, and ice conditions)
+	case 1066:
+	case 1069:
+	case 1114:
+	case 1117:
+	case 1204:
+	case 1207:
+	case 1210:
+	case 1213:
+	case 1216:
+	case 1219:
+	case 1222:
+	case 1225:
+	case 1237:
+	case 1249:
+	case 1252:
+	case 1255:
+	case 1258:
+	case 1261:
+	case 1264:
+	case 1279:
+	case 1282:
+		baseChar = 'd';
+		break;
+
+	// Thunderstorms (wind-related)
+	case 1087:
+		baseChar = 'e';
+		break;
+
+	// Default to cloud for unknown codes
+	default:
+		baseChar = 'b';
+		break;
+	}
+
+	// Override with wind icon if wind speed > 15 and condition is sun, cloud, or partly cloudy
+	if (windSpeed > 15.0 && (baseChar == 'a' || baseChar == 'b' || baseChar == 'f'))
+	{
+		return 'e';
+	}
+
+	return baseChar;
 }

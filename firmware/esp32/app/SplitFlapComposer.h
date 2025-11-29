@@ -28,15 +28,29 @@ private:
 	void OnWeatherMessage(const char *topic, const char *payload);
 	void OnCustomMessage(const char *topic, const char *payload);
 	void OnDisplayMessage(const char *topic, const char *payload);
+	void OnStockMessage(const char *topic, const char *payload);
 
 private:
 	PicoMQTT::Client _mqttClient;
 
 	// Store the latest values
 	String _latestHandicap;
-	String _latestTemperature;
+	int _latestTemperature;
+	int _latestConditionCode;
+	float _latestWindSpeed;
 	bool _hasHandicap;
 	bool _hasTemperature;
+
+	// Stock data
+	float _latestStockPrice;
+	bool _latestStockIsUp;
+	bool _hasStock;
+
+	// Formatted display strings (6 characters each)
+	String _timeString;
+	String _stockString;
+	String _handicapString;
+	String _weatherString;
 
 	// Temporary message state
 	String _temporaryMessage;
@@ -59,4 +73,5 @@ private:
 	void ProcessPendingDisplayUpdate();
 	void CheckAndUpdateTime();
 	void SetPendingDisplayMessage(const String &message);
+	char MapConditionCodeToChar(int conditionCode, float windSpeed);
 };
