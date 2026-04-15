@@ -135,6 +135,10 @@ void SplitflapTask::run()
 		runUpdate();
 		result = esp_task_wdt_reset();
 		ESP_ERROR_CHECK(result);
+
+		// Small delay to allow IDLE task to run (taskYIELD doesn't work for lower priority)
+		// IDLE has priority 0, this task has priority 1, so we must use vTaskDelay
+		vTaskDelay(pdMS_TO_TICKS(1));
 	}
 }
 
@@ -445,7 +449,12 @@ void SplitflapTask::showString(const char *str, uint8_t length, bool force_full_
 			}
 		}
 	}
-	assert(xQueueSendToBack(queue_, &command, portMAX_DELAY) == pdTRUE);
+	// Use timeout instead of blocking indefinitely to prevent watchdog timeout
+	// If queue is full after 1 second, log error and continue (drop message)
+	if (xQueueSendToBack(queue_, &command, pdMS_TO_TICKS(1000)) != pdTRUE)
+	{
+		log("WARNING: Failed to queue showString command - queue full");
+	}
 }
 
 void SplitflapTask::resetAll()
@@ -456,7 +465,10 @@ void SplitflapTask::resetAll()
 	{
 		command.data.module_command[i] = QCMD_RESET_AND_HOME;
 	}
-	assert(xQueueSendToBack(queue_, &command, portMAX_DELAY) == pdTRUE);
+	if (xQueueSendToBack(queue_, &command, pdMS_TO_TICKS(1000)) != pdTRUE)
+	{
+		log("WARNING: Failed to queue resetAll command - queue full");
+	}
 }
 
 void SplitflapTask::disableAll()
@@ -467,7 +479,10 @@ void SplitflapTask::disableAll()
 	{
 		command.data.module_command[i] = QCMD_DISABLE;
 	}
-	assert(xQueueSendToBack(queue_, &command, portMAX_DELAY) == pdTRUE);
+	if (xQueueSendToBack(queue_, &command, pdMS_TO_TICKS(1000)) != pdTRUE)
+	{
+		log("WARNING: Failed to queue disableAll command - queue full");
+	}
 }
 
 void SplitflapTask::setLed(const uint8_t id, const bool on)
@@ -477,14 +492,20 @@ void SplitflapTask::setLed(const uint8_t id, const bool on)
 	Command command = {};
 	command.command_type = CommandType::MODULES;
 	command.data.module_command[id] = on ? QCMD_LED_ON : QCMD_LED_OFF;
-	assert(xQueueSendToBack(queue_, &command, portMAX_DELAY) == pdTRUE);
+	if (xQueueSendToBack(queue_, &command, pdMS_TO_TICKS(1000)) != pdTRUE)
+	{
+		log("WARNING: Failed to queue setLed command - queue full");
+	}
 }
 
 void SplitflapTask::setSensorTest(bool sensor_test)
 {
 	Command command = {};
 	command.command_type = sensor_test ? CommandType::SENSOR_TEST_SET : CommandType::SENSOR_TEST_CLEAR;
-	assert(xQueueSendToBack(queue_, &command, portMAX_DELAY) == pdTRUE);
+	if (xQueueSendToBack(queue_, &command, pdMS_TO_TICKS(1000)) != pdTRUE)
+	{
+		log("WARNING: Failed to queue setSensorTest command - queue full");
+	}
 }
 
 SplitflapState SplitflapTask::getState()
@@ -498,7 +519,10 @@ void SplitflapTask::increaseOffsetTenth(const uint8_t id)
 	Command command = {};
 	command.command_type = CommandType::MODULES;
 	command.data.module_command[id] = QCMD_INCR_OFFSET_TENTH;
-	assert(xQueueSendToBack(queue_, &command, portMAX_DELAY) == pdTRUE);
+	if (xQueueSendToBack(queue_, &command, pdMS_TO_TICKS(1000)) != pdTRUE)
+	{
+		log("WARNING: Failed to queue increaseOffsetTenth command - queue full");
+	}
 }
 
 void SplitflapTask::increaseOffsetHalf(const uint8_t id)
@@ -506,7 +530,10 @@ void SplitflapTask::increaseOffsetHalf(const uint8_t id)
 	Command command = {};
 	command.command_type = CommandType::MODULES;
 	command.data.module_command[id] = QCMD_INCR_OFFSET_HALF;
-	assert(xQueueSendToBack(queue_, &command, portMAX_DELAY) == pdTRUE);
+	if (xQueueSendToBack(queue_, &command, pdMS_TO_TICKS(1000)) != pdTRUE)
+	{
+		log("WARNING: Failed to queue increaseOffsetHalf command - queue full");
+	}
 }
 
 void SplitflapTask::setOffset(const uint8_t id)
@@ -514,7 +541,10 @@ void SplitflapTask::setOffset(const uint8_t id)
 	Command command = {};
 	command.command_type = CommandType::MODULES;
 	command.data.module_command[id] = QCMD_SET_OFFSET;
-	assert(xQueueSendToBack(queue_, &command, portMAX_DELAY) == pdTRUE);
+	if (xQueueSendToBack(queue_, &command, pdMS_TO_TICKS(1000)) != pdTRUE)
+	{
+		log("WARNING: Failed to queue setOffset command - queue full");
+	}
 }
 
 void SplitflapTask::setConfiguration(Configuration *configuration)
@@ -530,14 +560,20 @@ void SplitflapTask::setLogger(Logger *logger)
 
 void SplitflapTask::postRawCommand(Command command)
 {
-	assert(xQueueSendToBack(queue_, &command, portMAX_DELAY) == pdTRUE);
+	if (xQueueSendToBack(queue_, &command, pdMS_TO_TICKS(1000)) != pdTRUE)
+	{
+		log("WARNING: Failed to queue postRawCommand - queue full");
+	}
 }
 
 void SplitflapTask::saveAllOffsets()
 {
 	Command command = {};
 	command.command_type = CommandType::SAVE_ALL_OFFSETS;
-	assert(xQueueSendToBack(queue_, &command, portMAX_DELAY) == pdTRUE);
+	if (xQueueSendToBack(queue_, &command, pdMS_TO_TICKS(1000)) != pdTRUE)
+	{
+		log("WARNING: Failed to queue saveAllOffsets command - queue full");
+	}
 }
 
 void SplitflapTask::restoreAllOffsets(uint16_t offsets[NUM_MODULES])
@@ -548,5 +584,8 @@ void SplitflapTask::restoreAllOffsets(uint16_t offsets[NUM_MODULES])
 	{
 		command.data.module_offsets[i] = offsets[i];
 	}
-	assert(xQueueSendToBack(queue_, &command, portMAX_DELAY) == pdTRUE);
+	if (xQueueSendToBack(queue_, &command, pdMS_TO_TICKS(1000)) != pdTRUE)
+	{
+		log("WARNING: Failed to queue restoreAllOffsets command - queue full");
+	}
 }

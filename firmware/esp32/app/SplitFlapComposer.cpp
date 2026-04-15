@@ -1,5 +1,6 @@
 #include "SplitFlapComposer.h"
 #include <ArduinoJson.h>
+#include <WiFi.h>
 #include "LocalTime.h"
 #include "Config.h"
 #include "SplitFlap.h"
@@ -65,9 +66,37 @@ void SplitFlapComposer::run()
 {
 	while (1)
 	{
+		// Periodic heartbeat to track main loop iterations
+		static unsigned long lastLoopLog = 0;
+		static unsigned long loopCount = 0;
+		unsigned long loopStart = millis();
+		loopCount++;
+
+		if (loopStart - lastLoopLog > 5000) // Log every 5 seconds
+		{
+			logger.logf("[Loop] Heartbeat - iteration %lu at %lu ms", loopCount, loopStart);
+			lastLoopLog = loopStart;
+		}
+
+		// Yield to IDLE task at start of every iteration
+		vTaskDelay(pdMS_TO_TICKS(1));
+
 		// Check if MQTT is enabled
 		if (Config::GetInstance()->GetMqttEnabled())
 		{
+			// Track WiFi connection state
+			static bool wasWiFiConnected = false;
+			bool isWiFiConnected = (WiFi.status() == WL_CONNECTED);
+			if (!wasWiFiConnected && isWiFiConnected)
+			{
+				logger.log("WiFi reconnected");
+			}
+			else if (wasWiFiConnected && !isWiFiConnected)
+			{
+				logger.log("WiFi disconnected");
+			}
+			wasWiFiConnected = isWiFiConnected;
+
 			// Check for MQTT configuration changes
 			if (_mqttClient.host != Config::GetInstance()->GetMqttBroker() || _mqttClient.port != Config::GetInstance()->GetMqttPort())
 			{
@@ -78,10 +107,31 @@ void SplitFlapComposer::run()
 				_mqttClient.disconnect();
 			}
 
-			_mqttClient.loop(); // Process MQTT messages
+			// Throttle MQTT loop calls to reduce blocking risk
+			// PicoMQTT's loop() can block on socket operations for 8+ seconds
+			static unsigned long lastMqttLoop = 0;
+			unsigned long now = millis();
+			if (now - lastMqttLoop >= 500) // Call only every 500ms - reduced frequency to avoid watchdog
+			{
+				logger.log("[Loop] Before _mqttClient.loop()");
+				unsigned long mqttLoopStart = millis();
+				_mqttClient.loop(); // Process MQTT messages
+				unsigned long mqttLoopDuration = millis() - mqttLoopStart;
+				logger.logf("[Loop] After _mqttClient.loop() - took %lu ms", mqttLoopDuration);
+				lastMqttLoop = now;
 
-			// Yield after processing MQTT to prevent watchdog timeout
-			taskYIELD();
+				// Log if MQTT loop takes too long (reduced threshold to detect issues earlier)
+				if (mqttLoopDuration > 100)
+				{
+					logger.logf("WARNING: MQTT loop took %lu ms", mqttLoopDuration);
+				}
+
+				// Critical: Log if approaching watchdog timeout (typically 5000ms)
+				if (mqttLoopDuration > 2000)
+				{
+					logger.logf("CRITICAL: MQTT loop took %lu ms - watchdog risk!", mqttLoopDuration);
+				}
+			}
 		}
 		else
 		{
@@ -91,9 +141,9 @@ void SplitFlapComposer::run()
 				logger.log("MQTT disabled, disconnecting...");
 				_mqttClient.disconnect();
 			}
-			// Yield when MQTT is disabled to prevent tight loop
-			taskYIELD();
 		}
+
+		vTaskDelay(pdMS_TO_TICKS(10));
 
 		// Check if temporary message has expired
 		if (_hasTemporaryMessage)
@@ -123,13 +173,30 @@ void SplitFlapComposer::OnHandicapMessage(const char *topic, const char *payload
 {
 	logger.log("SplitFlapComposer.OnHandicapMessage called");
 
+	// Sanity check payload size to prevent long parsing
+	size_t payloadLen = strlen(payload);
+	if (payloadLen > 512)
+	{
+		logger.logf("WARNING: Handicap payload too large (%d bytes), ignoring", payloadLen);
+		return;
+	}
+
 	// Parse the JSON payload to extract the handicap index
+	char jsonBuffer[512];
+	size_t bufferSize = min(payloadLen, sizeof(jsonBuffer) - 1);
+	strncpy(jsonBuffer, payload, bufferSize);
+	jsonBuffer[bufferSize] = '\0';
+
 	JsonDocument doc;
-	DeserializationError error = deserializeJson(doc, payload);
+	DeserializationError error = deserializeJson(doc, jsonBuffer, DeserializationOption::NestingLimit(10));
 
 	if (error)
 	{
 		logger.logf("Failed to parse handicap JSON: %s", error.c_str());
+		if (error == DeserializationError::NoMemory)
+		{
+			logger.logf("ERROR: JSON buffer too small for handicap message (512 bytes)");
+		}
 		return;
 	}
 
@@ -142,10 +209,10 @@ void SplitFlapComposer::OnHandicapMessage(const char *topic, const char *payload
 
 		logger.logf("Updated handicap value: %s", _latestHandicap.c_str());
 
-		// Update handicap string
-		_handicapString = "H:" + _latestHandicap;
-		while (_handicapString.length() < 6)
-			_handicapString += " ";
+		// Update handicap string using char buffer for efficiency
+		char handicapBuf[7]; // 6 chars + null terminator
+		snprintf(handicapBuf, sizeof(handicapBuf), "H:%-4s", _latestHandicap.c_str());
+		_handicapString = String(handicapBuf);
 		if (_handicapString.length() > 6)
 			_handicapString = _handicapString.substring(0, 6);
 
@@ -162,13 +229,30 @@ void SplitFlapComposer::OnWeatherMessage(const char *topic, const char *payload)
 {
 	logger.log("SplitFlapComposer.OnWeatherMessage called");
 
+	// Sanity check payload size to prevent long parsing
+	size_t payloadLen = strlen(payload);
+	if (payloadLen > 1024)
+	{
+		logger.logf("WARNING: Weather payload too large (%d bytes), ignoring", payloadLen);
+		return;
+	}
+
 	// Parse the JSON payload to extract the temperature
+	char jsonBuffer[1024];
+	size_t bufferSize = min(payloadLen, sizeof(jsonBuffer) - 1);
+	strncpy(jsonBuffer, payload, bufferSize);
+	jsonBuffer[bufferSize] = '\0';
+
 	JsonDocument doc;
-	DeserializationError error = deserializeJson(doc, payload);
+	DeserializationError error = deserializeJson(doc, jsonBuffer, DeserializationOption::NestingLimit(10));
 
 	if (error)
 	{
 		logger.logf("Failed to parse weather JSON: %s", error.c_str());
+		if (error == DeserializationError::NoMemory)
+		{
+			logger.logf("ERROR: JSON buffer too small for weather message (1024 bytes)");
+		}
 		return;
 	}
 
@@ -208,18 +292,22 @@ void SplitFlapComposer::PublishComposedMessage()
 {
 	// Skip if a temporary message is active
 	if (_hasTemporaryMessage)
+	{
+		logger.log("[PublishComposed] Skipping - temporary message active");
 		return;
+	}
 
 	// Compose the message from each 6-character section: time, stock, handicap, weather
 	String composedMessage = _timeString + _handicapString + _stockString + _weatherString;
 
 	if (!_mqttClient.connected())
 	{
-		logger.log("MQTT not connected, setting display message directly");
+		logger.log("[PublishComposed] MQTT not connected, setting display message directly");
 
-		// Ensure message is at least 6 characters long, padding with spaces if needed
-		while (composedMessage.length() < 6)
-			composedMessage += " ";
+		// Ensure message is at least 6 characters long using char buffer
+		char buf[25]; // 24 chars max + null terminator
+		snprintf(buf, sizeof(buf), "%-6s", composedMessage.c_str());
+		composedMessage = String(buf);
 
 		// Set 6th character to 'b' (0-indexed position 5)
 		composedMessage.setCharAt(5, 'b');
@@ -248,13 +336,30 @@ void SplitFlapComposer::OnCustomMessage(const char *topic, const char *payload)
 {
 	logger.logf("SplitFlapComposer.OnCustomMessage called for topic: %s", topic);
 
+	// Sanity check payload size to prevent long parsing
+	size_t payloadLen = strlen(payload);
+	if (payloadLen > 1024)
+	{ // Allow larger for custom messages
+		logger.logf("WARNING: Custom message payload too large (%d bytes), ignoring", payloadLen);
+		return;
+	}
+
 	// Parse the JSON payload to extract the message
+	char jsonBuffer[1024];
+	size_t bufferSize = min(payloadLen, sizeof(jsonBuffer) - 1);
+	strncpy(jsonBuffer, payload, bufferSize);
+	jsonBuffer[bufferSize] = '\0';
+
 	JsonDocument doc;
-	DeserializationError error = deserializeJson(doc, payload);
+	DeserializationError error = deserializeJson(doc, jsonBuffer, DeserializationOption::NestingLimit(10));
 
 	if (error)
 	{
 		logger.logf("Failed to parse custom message JSON: %s", error.c_str());
+		if (error == DeserializationError::NoMemory)
+		{
+			logger.logf("ERROR: JSON buffer too small for custom message (1024 bytes)");
+		}
 		return;
 	}
 
@@ -284,7 +389,7 @@ void SplitFlapComposer::PublishTemporaryMessage()
 {
 	if (!_mqttClient.connected())
 	{
-		logger.log("MQTT not connected, cannot publish temporary message");
+		logger.log("[PublishTemp] MQTT not connected, cannot publish temporary message");
 		return;
 	}
 
@@ -307,6 +412,14 @@ void SplitFlapComposer::OnDisplayMessage(const char *topic, const char *payload)
 {
 	logger.logf("SplitFlapComposer.OnDisplayMessage called with payload: %s", payload);
 
+	// Sanity check payload size (display is NUM_MODULES characters)
+	size_t payloadLen = strlen(payload);
+	if (payloadLen > 256)
+	{ // Much larger than NUM_MODULES but reasonable
+		logger.logf("WARNING: Display message too large (%d bytes), ignoring", payloadLen);
+		return;
+	}
+
 	// Queue the message instead of blocking - it will be processed in the main loop
 	SetPendingDisplayMessage(String(payload));
 }
@@ -315,13 +428,30 @@ void SplitFlapComposer::OnStockMessage(const char *topic, const char *payload)
 {
 	logger.logf("SplitFlapComposer.OnStockMessage called for topic: %s", topic);
 
+	// Sanity check payload size to prevent long parsing
+	size_t payloadLen = strlen(payload);
+	if (payloadLen > 512)
+	{
+		logger.logf("WARNING: Stock payload too large (%d bytes), ignoring", payloadLen);
+		return;
+	}
+
 	// Parse the JSON payload to extract price and change
+	char jsonBuffer[512];
+	size_t bufferSize = min(payloadLen, sizeof(jsonBuffer) - 1);
+	strncpy(jsonBuffer, payload, bufferSize);
+	jsonBuffer[bufferSize] = '\0';
+
 	JsonDocument doc;
-	DeserializationError error = deserializeJson(doc, payload);
+	DeserializationError error = deserializeJson(doc, jsonBuffer, DeserializationOption::NestingLimit(10));
 
 	if (error)
 	{
 		logger.logf("Failed to parse stock JSON: %s", error.c_str());
+		if (error == DeserializationError::NoMemory)
+		{
+			logger.logf("ERROR: JSON buffer too small for stock message (512 bytes)");
+		}
 		return;
 	}
 

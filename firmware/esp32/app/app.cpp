@@ -5,7 +5,7 @@ App::App(SplitflapTask &splitflapTask, DisplayTask &displayTask, Logger &logger)
 																				   network(displayTask, simpleWebServer, logger),
 																				   config(simpleWebServer, logger),
 																				   splitFlap(splitflapTask, logger),
-																				   splitFlapComposer(splitFlap, logger)
+																				   splitFlapComposer(splitFlap, logger, 1) // Run on CPU 1 to avoid IDLE0 starvation
 {
 }
 
