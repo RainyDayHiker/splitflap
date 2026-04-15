@@ -27,17 +27,52 @@
 #define STEPS_PER_REVOLUTION 2048 // Keep in sync with splitflap_module.h
 #endif
 
+// Empty display string for clearing all modules
+// If NUM_MODULES changes, update this string to match
+namespace
+{
+	constexpr const char EMPTY_DISPLAY[] = "                        "; // 24 spaces
+	static_assert(sizeof(EMPTY_DISPLAY) - 1 == NUM_MODULES,
+				  "EMPTY_DISPLAY length must match NUM_MODULES. Update the string if NUM_MODULES changes.");
+}
+
 SplitFlap::SplitFlap(SplitflapTask &splitflapTask, Logger &logger, const uint8_t task_core) : Task("SplitFlap", 8192, 1, task_core),
 																							  splitFlap(splitflapTask),
-																							  logger(logger)
+																							  logger(logger),
+																							  lastMessage(EMPTY_DISPLAY)
 {
 }
 
 void SplitFlap::run()
 {
+	bool wasInQuietPeriod = false;
+
 	while (1)
 	{
-		vTaskDelay(pdMS_TO_TICKS(120 * 1000)); // Nothing to do so sleep a lot
+		// Check if we're in quiet period
+		if (LocalTime::HasTimeSyncHappened())
+		{
+			struct tm timeinfo;
+			LocalTime::GetCurrentTime(&timeinfo);
+			bool isInQuietPeriod = Config::GetInstance()->IsTimeInQuietPeriod(&timeinfo);
+
+			// If entering quiet period, clear the display
+			if (isInQuietPeriod && !wasInQuietPeriod)
+			{
+				logger.log("Entering quiet period, clearing display");
+				SetDisplayMessage(EMPTY_DISPLAY);
+			}
+			// If exiting quiet period, restore pending message if any
+			else if (!isInQuietPeriod && wasInQuietPeriod)
+			{
+				logger.log("Exiting quiet period, restoring last message");
+				SetDisplayMessage(lastMessage);
+			}
+
+			wasInQuietPeriod = isInQuietPeriod;
+		}
+
+		vTaskDelay(pdMS_TO_TICKS(60 * 1000)); // Check every minute
 	}
 }
 
@@ -67,6 +102,26 @@ void SplitFlap::registerHandlers(SimpleWebServer &webServer)
 
 void SplitFlap::SetDisplayMessage(const String &message)
 {
+	// Always store non-empty messages (except all spaces) for restoration after quiet period
+	if (!message.equals(EMPTY_DISPLAY))
+		lastMessage = message;
+
+	// Check if we're in quiet period
+	if (LocalTime::HasTimeSyncHappened())
+	{
+		struct tm timeinfo;
+		LocalTime::GetCurrentTime(&timeinfo);
+		if (Config::GetInstance()->IsTimeInQuietPeriod(&timeinfo))
+		{
+			if (!message.equals(EMPTY_DISPLAY))
+			{
+				// During quiet period, don't update display (message already stored above)
+				return;
+			}
+			// Allow clearing the display during quiet period
+		}
+	}
+
 	// Message needs to be converted for display
 	// - First 12 characters of the message are mapped to the positions 24-13 in the display
 	// - Remaining characters of the message are mapped to the positions 1-12 in the display
