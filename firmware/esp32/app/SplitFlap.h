@@ -42,6 +42,9 @@ private:
 	SplitflapTask &splitFlap;
 	Logger &logger;
 
+	// Last non-empty message to restore after quiet period
+	String lastMessage;
+
 	// Builds the JSON state string for /splitflap/state.json
 	String buildStateJson();
 
