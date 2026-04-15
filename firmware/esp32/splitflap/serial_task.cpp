@@ -98,7 +98,9 @@ void SerialTask::run()
 void SerialTask::log(const char *msg)
 {
 	// Allocate a string for the duration it's in the queue; it is free'd by the queue consumer
-	std::string *msg_str = new std::string(msg);
+	char buffer[512];
+	snprintf(buffer, sizeof(buffer), "[%lu] %s", millis(), msg);
+	std::string *msg_str = new std::string(buffer);
 
 	// Put string in queue (or drop if full to avoid blocking)
 	xQueueSendToBack(log_queue_, &msg_str, 0);
